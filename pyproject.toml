@@ -1,0 +1,15 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "personal-job-sponsor-agent"
+version = "0.1.0"
+description = "Daily job scanner for profile matches with visa sponsorship or global remote eligibility."
+requires-python = ">=3.11"
+
+[project.scripts]
+job-sponsor-agent = "job_sponsor_agent.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["job_sponsor_agent*"]

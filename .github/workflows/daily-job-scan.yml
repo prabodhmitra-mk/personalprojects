@@ -1,0 +1,51 @@
+name: Daily job sponsorship scan
+
+on:
+  workflow_dispatch:
+  schedule:
+    # 7:00 PM IST every day.
+    - cron: "30 13 * * *"
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Run scanner
+        env:
+          JOB_AGENT_PROFILE_JSON: ${{ secrets.JOB_AGENT_PROFILE_JSON }}
+        run: |
+          python -m job_sponsor_agent.cli --output reports/daily-job-matches.md
+
+      - name: Upload report artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: daily-job-matches
+          path: reports/daily-job-matches.md
+
+      - name: Create daily GitHub issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require("fs");
+            const report = fs.readFileSync("reports/daily-job-matches.md", "utf8");
+            const today = new Date().toLocaleDateString("en-CA", {
+              timeZone: "Asia/Kolkata",
+            });
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `Daily sponsored job matches - ${today}`,
+              body: report,
+            });

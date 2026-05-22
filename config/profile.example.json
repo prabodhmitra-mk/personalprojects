@@ -1,0 +1,35 @@
+{
+  "name": "Your Name",
+  "target_titles": [
+    "software engineer",
+    "backend engineer",
+    "full stack engineer",
+    "python developer"
+  ],
+  "skills": [
+    "python",
+    "typescript",
+    "react",
+    "node.js",
+    "django",
+    "fastapi",
+    "postgresql",
+    "aws"
+  ],
+  "preferred_locations": [
+    "india",
+    "remote",
+    "worldwide",
+    "singapore",
+    "germany",
+    "netherlands",
+    "united kingdom",
+    "canada"
+  ],
+  "work_permission_countries": [
+    "india"
+  ],
+  "max_results": 15,
+  "minimum_score": 35,
+  "require_sponsorship_or_global_remote": true
+}
