@@ -16,6 +16,7 @@ import json
 import re
 import sys
 import textwrap
+import unicodedata
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -48,6 +49,7 @@ SEARCH_QUERIES = [
 ROLE_KEYWORDS = {
     "Finance": [
         "finance",
+        "financial",
         "financial analyst",
         "fp&a",
         "treasury",
@@ -61,6 +63,8 @@ ROLE_KEYWORDS = {
         "loan analyst",
         "lending",
         "mortgage",
+        "collections",
+        "recoveries",
     ],
     "Risk analysis": [
         "risk",
@@ -119,20 +123,46 @@ INDIA_COMPATIBLE_TERMS = [
 ]
 
 EXCLUSIVE_LOCATION_PATTERNS = [
+    r"\busa\b",
+    r"\bu\.s\.\b",
+    r"\bus\b",
+    r"\bunited states\b",
     r"\bus only\b",
     r"\bu\.s\. only\b",
     r"\bunited states only\b",
+    r"\bcanada\b",
     r"\bcanada only\b",
+    r"\buk\b",
     r"\buk only\b",
+    r"\bunited kingdom\b",
     r"\bunited kingdom only\b",
+    r"\beurope\b",
     r"\beurope only\b",
+    r"\beu\b",
     r"\beu only\b",
+    r"\beuropean union\b",
     r"\beuropean union only\b",
+    r"\blatam\b",
     r"\blatam only\b",
+    r"\bamericas\b",
     r"\bamericas only\b",
+    r"\baustralia\b",
     r"\baustralia only\b",
+    r"\bnew zealand\b",
     r"\bnew zealand only\b",
 ]
+
+ASCII_REPLACEMENTS = str.maketrans(
+    {
+        "\u2018": "'",
+        "\u2019": "'",
+        "\u201c": '"',
+        "\u201d": '"',
+        "\u2013": "-",
+        "\u2014": "-",
+        "\u00a0": " ",
+    }
+)
 
 
 @dataclass(frozen=True)
@@ -163,19 +193,33 @@ def clean_text(value: object) -> str:
     if value is None:
         return ""
     text = html.unescape(str(value))
+    if "â" in text or "Ã" in text:
+        try:
+            text = text.encode("latin-1").decode("utf-8")
+        except UnicodeError:
+            pass
+    text = text.replace("\\n", " ").replace("\\r", " ").replace("\\t", " ")
     text = re.sub(r"<[^>]+>", " ", text)
+    text = text.translate(ASCII_REPLACEMENTS)
+    text = unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode("ascii")
     text = re.sub(r"\s+", " ", text)
     return text.strip()
 
 
-def contains_any(text: str, terms: Iterable[str]) -> bool:
+def contains_keyword(text: str, term: str) -> bool:
     normalized = text.casefold()
-    return any(term.casefold() in normalized for term in terms)
+    keyword = re.escape(term.casefold())
+    return re.search(rf"(?<![a-z0-9]){keyword}(?![a-z0-9])", normalized) is not None
+
+
+def contains_any(text: str, terms: Iterable[str]) -> bool:
+    return any(contains_keyword(text, term) for term in terms)
 
 
 def is_exclusive_non_india_location(text: str) -> bool:
     normalized = text.casefold()
-    if "india" in normalized or "worldwide" in normalized or "anywhere" in normalized:
+    compatible_terms = [term for term in INDIA_COMPATIBLE_TERMS if term != "remote only"]
+    if contains_any(normalized, compatible_terms):
         return False
     return any(re.search(pattern, normalized) for pattern in EXCLUSIVE_LOCATION_PATTERNS)
 
@@ -258,11 +302,15 @@ def make_job(
     if not title_text or not url_text:
         return None
 
-    searchable = f"{title_text} {company_text} {location_text} {description_text} {tags_text}"
-    categories = matching_categories(searchable)
+    primary_text = title_text
+    description_only_text = f"{title_text} {tags_text} {description_text}"
+    categories = matching_categories(primary_text)
+    if contains_any(description_only_text, ROLE_KEYWORDS["Return-to-work"]):
+        categories = sorted({*categories, "Return-to-work"}, key=list(ROLE_KEYWORDS).index)
     if not categories:
         return None
 
+    searchable = f"{title_text} {company_text} {location_text} {description_text} {tags_text}"
     if not is_remote_india_compatible(location_text, searchable):
         return None
 
@@ -453,7 +501,7 @@ def render_markdown(jobs: list[Job], generated_at: datetime, errors: list[str]) 
             "- Sources: Remotive, Remote OK, and Arbeitnow public job feeds.",
             "- Schedule: every day at 1:00 PM IST.",
             "- Location filter: keeps roles marked as India, worldwide, anywhere, global, Asia/APAC, or generally remote without an explicit non-India-only restriction.",
-            "- Keyword filter: finance, credit underwriting, risk analysis, accounts/accounting, taxation/tax, and return-to-work terms.",
+            "- Keyword filter: title-focused finance, credit underwriting, risk analysis, accounts/accounting, taxation/tax, and return-to-work terms.",
             "",
         ]
     )
@@ -606,7 +654,7 @@ def render_html(jobs: list[Job], generated_at: datetime, errors: list[str]) -> s
               <ul>
                 <li>Sources: Remotive, Remote OK, and Arbeitnow public job feeds.</li>
                 <li>Location filter: India, worldwide, anywhere, global, Asia/APAC, or remote without an explicit non-India-only restriction.</li>
-                <li>Keyword filter: finance, credit underwriting, risk analysis, accounts/accounting, taxation/tax, and return-to-work terms.</li>
+                <li>Keyword filter: title-focused finance, credit underwriting, risk analysis, accounts/accounting, taxation/tax, and return-to-work terms.</li>
               </ul>
             </section>
           </main>

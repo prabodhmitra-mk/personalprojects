@@ -22,7 +22,7 @@ The GitHub Actions workflow in `.github/workflows/daily-job-postings.yml` runs e
 ## Run locally
 
 ```bash
-python scripts/publish_daily_jobs.py
+python3 scripts/publish_daily_jobs.py
 ```
 
 The script has no required API keys or third-party Python packages.

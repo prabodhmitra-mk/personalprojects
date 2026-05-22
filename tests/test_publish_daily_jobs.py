@@ -31,6 +31,14 @@ class JobFilterTests(unittest.TestCase):
             )
         )
 
+    def test_remote_usa_role_is_excluded(self):
+        self.assertFalse(
+            is_remote_india_compatible(
+                "Remote USA",
+                "Finance analyst role for a US-based team.",
+            )
+        )
+
     def test_india_remote_role_is_included(self):
         self.assertTrue(
             is_remote_india_compatible(
@@ -46,6 +54,19 @@ class JobFilterTests(unittest.TestCase):
 
         self.assertIn("Return-to-work", categories)
         self.assertIn("Accounts", categories)
+
+    def test_generic_description_keyword_does_not_match_role(self):
+        job = make_job(
+            title="Customer Success Manager",
+            company="Example",
+            location="Remote - Worldwide",
+            url="https://example.com/customer-success",
+            source="Example",
+            published_at="2026-05-20T00:00:00+00:00",
+            description="Supports enterprise accounts and reduces operational risk.",
+        )
+
+        self.assertIsNone(job)
 
 
 if __name__ == "__main__":
