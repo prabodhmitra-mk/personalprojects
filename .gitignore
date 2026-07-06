@@ -1,0 +1,14 @@
+.env
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.streamlit/secrets.toml
+
+# Local OAuth tokens, downloaded statements, and parsed exports.
+credentials.json
+token.json
+data/
+downloads/
