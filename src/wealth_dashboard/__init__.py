@@ -1,0 +1,2 @@
+"""Personal wealth dashboard package."""
+
