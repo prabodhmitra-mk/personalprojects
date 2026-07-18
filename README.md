@@ -11,10 +11,11 @@ A small privacy-first web app that helps you get total values from your EPFO pas
    - use the browser extension to import the visible EPFO page automatically, or
    - copy the passbook table/page text or save an HTML/TXT/CSV export manually.
 5. Click **Get total balance** if you imported manually. Extension imports are parsed automatically.
-6. Import NPS from email attachments or manually import copied/downloaded NPS holdings or statement content.
-7. Optionally click **Ask local LLM** if the rule-based PF parser cannot understand a changed EPFO format.
-8. Review PF, NPS, and combined portfolio totals.
-9. Click **Download local XLS** to save an Excel-compatible workbook on your machine.
+6. Optionally enter a manual PF projection baseline: current PF balance plus last month employee/employer contribution.
+7. Import NPS from email attachments or manually import copied/downloaded NPS holdings or statement content.
+8. Optionally click **Ask local LLM** if the rule-based PF parser cannot understand a changed EPFO format.
+9. Review PF, projected PF, NPS, and combined portfolio totals.
+10. Click **Download local XLS** to save an Excel-compatible workbook on your machine.
 
 The app does not store your EPFO password and does not try to bypass EPFO login security.
 Imported PF/NPS content is processed locally in the browser tab.
@@ -63,6 +64,33 @@ The dashboard polls that local endpoint and parses the imported content automati
 
 Chrome/Edge do not allow extensions to open their toolbar popup automatically, so the extension uses an in-page prompt instead.
 You can still click the extension icon manually if the prompt does not appear.
+
+## Manual PF projection baseline
+
+If you do not want to import EPFO every time, use the **Manual PF projection baseline** section:
+
+1. Enter your current official PF balance.
+2. Enter last month employee contribution.
+3. Enter last month employer contribution.
+4. Click **Save PF projection baseline**.
+
+The app saves this baseline in browser local storage and, on future app opens, estimates current PF balance as:
+
+```text
+saved PF balance + completed months since save date * (employee contribution + employer contribution)
+```
+
+This is only an estimate. Click **Validate by logging into EPFO** to open EPFO manually and compare against the official current balance.
+
+The Excel workbook includes a `PF Projection` sheet with:
+
+- Saved current balance.
+- Last month employee contribution.
+- Last month employer contribution.
+- Assumed monthly deposit.
+- Completed months elapsed.
+- Projected PF balance.
+- Validation reminder.
 
 ## Import NPS data
 
@@ -175,6 +203,7 @@ The browser extension reduces the manual import step, but it still requires you 
 
 - Combined PF + NPS value.
 - Total EPFO/PF balance.
+- Projected PF balance from saved manual baseline.
 - PF employee contribution total.
 - PF employer contribution total.
 - PF pension/EPS contribution total.
@@ -190,6 +219,7 @@ It contains separate sheets for:
 
 - `Summary`
 - `PF Summary`
+- `PF Projection`
 - `PF Company Wise`
 - `PF Rows`
 - `NPS Summary`
