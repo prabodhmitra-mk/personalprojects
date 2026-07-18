@@ -6,6 +6,8 @@ const openPortalButton = document.querySelector("#open-portal");
 const fileInput = document.querySelector("#passbook-file");
 const passbookInput = document.querySelector("#passbook-input");
 const parseButton = document.querySelector("#parse-passbook");
+const llmButton = document.querySelector("#llm-extract");
+const llmModelInput = document.querySelector("#llm-model");
 const clearButton = document.querySelector("#clear-data");
 const sampleButton = document.querySelector("#load-sample");
 const downloadXlsButton = document.querySelector("#download-xls");
@@ -43,6 +45,7 @@ fileInput.addEventListener("change", async (event) => {
 });
 
 parseButton.addEventListener("click", parseAndRender);
+llmButton.addEventListener("click", runLocalLlmExtraction);
 
 clearButton.addEventListener("click", () => {
   passbookInput.value = "";
@@ -89,6 +92,51 @@ function parseAndRender() {
     return;
   }
 
+  renderParsedResult(result, `Detected ${result.formattedTotalBalance} from ${result.lineCount} imported lines across ${result.companySummaries.length || 1} company group(s). Review it against EPFO before relying on it.`);
+}
+
+async function runLocalLlmExtraction() {
+  const pageText = passbookInput.value.trim();
+  if (!pageText) {
+    setStatus("Import EPFO passbook content before asking the local LLM.");
+    return;
+  }
+
+  llmButton.disabled = true;
+  setStatus("Asking local Ollama model to extract EPFO balance JSON...");
+
+  try {
+    const response = await fetch("/api/llm-extract", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        pageText,
+        model: llmModelInput.value.trim() || "llama3.2:1b"
+      })
+    });
+    const payload = await response.json();
+
+    if (!response.ok || !payload.ok) {
+      throw new Error(payload.error || "Local LLM extraction failed.");
+    }
+
+    const result = buildResultFromLlmExtraction(payload.extraction, pageText);
+    if (result.totalBalance === null) {
+      setStatus("Local LLM did not find a total balance. Try the rule-based parser or another local model.");
+      return;
+    }
+
+    renderParsedResult(result, `Local LLM (${payload.model}) extracted ${result.formattedTotalBalance}. Review it against EPFO before relying on it.`);
+  } catch (error) {
+    setStatus(`Local LLM failed: ${error.message}. Make sure Ollama is running locally and the model is installed.`);
+  } finally {
+    llmButton.disabled = false;
+  }
+}
+
+function renderParsedResult(result, statusText) {
   lastParseResult = result;
   totalBalance.textContent = result.formattedTotalBalance;
   employeeTotal.textContent = formatOptionalCurrency(result.totals.employee);
@@ -103,7 +151,7 @@ function parseAndRender() {
 
   dashboard.hidden = false;
   downloadXlsButton.disabled = false;
-  setStatus(`Detected ${result.formattedTotalBalance} from ${result.lineCount} imported lines across ${result.companySummaries.length || 1} company group(s). Review it against EPFO before relying on it.`);
+  setStatus(statusText);
 }
 
 pollLatestImport();
@@ -212,6 +260,60 @@ function renderRecords(records) {
     `;
     recordList.append(row);
   }
+}
+
+function buildResultFromLlmExtraction(extraction, pageText) {
+  const companySummaries = (extraction.companies || []).map((company) => ({
+    company: company.company || "Unknown company",
+    memberIds: company.memberId ? [company.memberId] : [],
+    employeeTotal: company.employeeTotal,
+    employerTotal: company.employerTotal,
+    pensionTotal: company.pensionTotal,
+    contributionTotal: sumNullable([company.employeeTotal, company.employerTotal, company.pensionTotal]),
+    latestBalance: company.latestBalance,
+    recordCount: 0
+  }));
+  const companyBalanceTotal = sumNullable(companySummaries.map((company) => company.latestBalance));
+  const totalBalance = extraction.totalBalance ?? companyBalanceTotal;
+  const totals = {
+    employee: extraction.employeeContributionTotal,
+    employer: extraction.employerContributionTotal,
+    pension: extraction.pensionContributionTotal,
+    contributionTotal: sumNullable([
+      extraction.employeeContributionTotal,
+      extraction.employerContributionTotal,
+      extraction.pensionContributionTotal
+    ])
+  };
+
+  return {
+    totalBalance,
+    formattedTotalBalance: totalBalance === null ? null : formatCurrency(totalBalance),
+    balanceSource: "local-llm",
+    confidence: extraction.confidence || 0,
+    components: {
+      employee: totals.employee,
+      employer: totals.employer,
+      pension: totals.pension
+    },
+    totals,
+    companySummaries,
+    records: [],
+    warnings: [
+      "This result was extracted by a local LLM. Treat it as an assistive fallback and verify against the EPFO page.",
+      ...((extraction.evidence || []).map((item) => `Evidence: ${item}`))
+    ],
+    lineCount: pageText.split(/\r?\n/).filter(Boolean).length
+  };
+}
+
+function sumNullable(values) {
+  const presentValues = values.filter((value) => value !== null && value !== undefined);
+  if (presentValues.length === 0) {
+    return null;
+  }
+
+  return presentValues.reduce((total, value) => total + value, 0);
 }
 
 function downloadWorkbook(result) {
@@ -333,6 +435,7 @@ function formatSource(value) {
     "closing-balance-shares": "Closing employee + employer shares",
     "component-sum": "Sum of detected components",
     "company-balance-sum": "Sum of latest company balances",
+    "local-llm": "Local LLM extraction",
     "last-row-balance": "Last passbook row balance"
   }[value] || value;
 }

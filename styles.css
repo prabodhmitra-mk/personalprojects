@@ -227,10 +227,31 @@ textarea:focus {
 }
 
 .actions {
+  align-items: end;
   display: flex;
   flex-wrap: wrap;
   gap: 0.7rem;
   margin-top: 1rem;
+}
+
+.llm-model-field {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.llm-model-field span {
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.llm-model-field input {
+  border: 1px solid var(--border);
+  border-radius: 0.8rem;
+  color: var(--text);
+  min-height: 3rem;
+  padding: 0.7rem 0.8rem;
+  width: 150px;
 }
 
 .status {

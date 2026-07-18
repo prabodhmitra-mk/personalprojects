@@ -67,10 +67,19 @@
           <textarea id="passbook-input" placeholder="Paste EPFO passbook table text, copied page content, or downloaded HTML here..."></textarea>
           <div class="actions">
             <button id="parse-passbook" class="primary" type="button">Get total balance</button>
+            <label class="llm-model-field">
+              <span>Local LLM model</span>
+              <input id="llm-model" type="text" value="llama3.2:1b" spellcheck="false">
+            </label>
+            <button id="llm-extract" type="button">Ask local LLM</button>
             <button id="download-xls" type="button" disabled>Download local XLS</button>
             <button id="load-sample" type="button">Load sample</button>
             <button id="clear-data" type="button">Clear</button>
           </div>
+          <p class="hint">
+            Optional LLM fallback: install Ollama locally, run <code>ollama pull llama3.2:1b</code>,
+            then use this button if EPFO changes the page format.
+          </p>
           <p id="status-message" class="status">Waiting for EPFO passbook content.</p>
         </article>
       </section>

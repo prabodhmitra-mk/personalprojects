@@ -4,6 +4,8 @@ import { createServer } from "node:http";
 import { extname, join, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { DEFAULT_OLLAMA_MODEL, extractWithOllama } from "./src/llmExtractor.js";
+
 const root = fileURLToPath(new URL(".", import.meta.url));
 const port = Number(process.env.PORT || 5173);
 const maxImportSizeBytes = 8 * 1024 * 1024;
@@ -112,6 +114,43 @@ async function handleApiRequest(request, response, url) {
       });
     } catch (error) {
       sendJson(response, 400, { error: error.message });
+    }
+
+    return true;
+  }
+
+  if (url.pathname === "/api/llm-extract" && request.method === "POST") {
+    try {
+      const payload = await readJsonBody(request);
+      const pageText = String(payload.pageText || "").trim();
+      const model = String(payload.model || DEFAULT_OLLAMA_MODEL).trim();
+
+      if (!pageText) {
+        sendJson(response, 400, { error: "pageText is required." });
+        return true;
+      }
+
+      if (!model) {
+        sendJson(response, 400, { error: "model is required." });
+        return true;
+      }
+
+      const result = await extractWithOllama({
+        pageText,
+        model
+      });
+
+      sendJson(response, 200, {
+        ok: true,
+        ...result
+      });
+    } catch (error) {
+      sendJson(response, 502, {
+        ok: false,
+        error: error.name === "AbortError"
+          ? "Local LLM timed out. Try a smaller model or shorter page content."
+          : error.message
+      });
     }
 
     return true;

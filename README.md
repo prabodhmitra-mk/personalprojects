@@ -11,8 +11,9 @@ A small privacy-first web app that helps you get a total balance from your EPFO 
    - use the browser extension to import the visible EPFO page automatically, or
    - copy the passbook table/page text or save an HTML/TXT/CSV export manually.
 5. Click **Get total balance** if you imported manually. Extension imports are parsed automatically.
-6. Review company-wise employee/employer/pension totals.
-7. Click **Download local XLS** to save an Excel-compatible file on your machine.
+6. Optionally click **Ask local LLM** if the rule-based parser cannot understand a changed EPFO format.
+7. Review company-wise employee/employer/pension totals.
+8. Click **Download local XLS** to save an Excel-compatible file on your machine.
 
 The app does not store your EPFO password and does not try to bypass EPFO login security.
 Imported passbook content is processed in the browser tab.
@@ -62,6 +63,32 @@ The dashboard polls that local endpoint and parses the imported content automati
 Chrome/Edge do not allow extensions to open their toolbar popup automatically, so the extension uses an in-page prompt instead.
 You can still click the extension icon manually if the prompt does not appear.
 
+## Optional local LLM fallback
+
+The dashboard can ask a local Ollama-compatible LLM to extract EPFO balance data as strict JSON.
+This is useful when EPFO changes labels/layout and the rule-based parser needs help.
+
+Install and run Ollama locally, then pull a small model:
+
+```bash
+ollama pull llama3.2:1b
+```
+
+Start the dashboard:
+
+```bash
+npm start
+```
+
+After importing EPFO page content, click **Ask local LLM**.
+
+Notes:
+
+- The dashboard calls `http://127.0.0.1:11434/api/generate` through the local Node server.
+- The server only allows local Ollama URLs.
+- The LLM result is shown as an assistive fallback and should be verified against EPFO.
+- If you prefer a different installed local model, edit the model input in the dashboard.
+
 ## Run locally
 
 ```bash
@@ -96,5 +123,6 @@ The browser extension reduces the manual import step, but it still requires you 
 - Pension/EPS contribution total.
 - Company-wise totals across detected member IDs.
 - Recent passbook rows.
+- Optional local LLM extraction result when enabled.
 
 The generated `.xls` file is created locally in the browser from the parsed passbook data.
