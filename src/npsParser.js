@@ -128,7 +128,7 @@ function findHoldings(lines) {
 }
 
 function parseHoldingLine(line) {
-  const hasSchemeSignal = /\b(?:scheme|asset\s+class|equity|corporate|government|alternate|e\s*-?\s*tier|c\s*-?\s*tier|g\s*-?\s*tier|a\s*-?\s*tier)\b/i.test(line);
+  const hasSchemeSignal = /\b(?:scheme|asset\s+class|equity|corporate|bond|government|securities|alternate|e\s*-?\s*tier|c\s*-?\s*tier|g\s*-?\s*tier|a\s*-?\s*tier)\b/i.test(line);
   const hasUnitsOrNav = /\b(?:units?|nav|value|amount|corpus)\b/i.test(line);
   const amounts = extractAmounts(line);
 
