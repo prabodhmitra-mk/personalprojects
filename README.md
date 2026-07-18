@@ -80,7 +80,7 @@ The app saves this baseline in browser local storage and, on future app opens, e
 saved PF balance + completed months since save date * (employee contribution + employer contribution)
 ```
 
-This is only an estimate. Click **Validate by logging into EPFO** to open EPFO manually and compare against the official current balance.
+This is only an estimate. Validation is optional but recommended: click **Optional: validate in EPFO** to open EPFO manually and compare against the official current balance.
 
 The Excel workbook includes a `PF Projection` sheet with:
 
@@ -90,7 +90,7 @@ The Excel workbook includes a `PF Projection` sheet with:
 - Assumed monthly deposit.
 - Completed months elapsed.
 - Projected PF balance.
-- Validation reminder.
+- Optional validation recommendation.
 
 ## Import NPS data
 

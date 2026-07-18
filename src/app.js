@@ -112,7 +112,7 @@ savePfProjectionButton.addEventListener("click", savePfProjectionBaseline);
 clearPfProjectionButton.addEventListener("click", clearPfProjectionBaseline);
 validatePfProjectionButton.addEventListener("click", () => {
   window.open(EPFO_PASSBOOK_URL, "_blank", "noopener,noreferrer");
-  setPfProjectionStatus("Opened EPFO. Log in manually and compare the projected PF balance with the official current balance.");
+  setPfProjectionStatus("Opened EPFO. Optional but recommended: log in manually and compare the projected PF balance with the official current balance.");
 });
 
 clearButton.addEventListener("click", () => {
@@ -213,7 +213,7 @@ function savePfProjectionBaseline() {
     pfProjection = calculatePfProjection(pfProjectionBaseline);
     renderPfProjection();
     refreshPortfolioSummary();
-    setPfProjectionStatus("Saved PF projection baseline locally. Download local XLS to keep an Excel copy, and validate by manually logging into EPFO.");
+    setPfProjectionStatus("Saved PF projection baseline locally. Download local XLS to keep an Excel copy. Optional EPFO validation is recommended.");
   } catch (error) {
     setPfProjectionStatus(error.message);
   }
@@ -265,7 +265,7 @@ function renderPfProjection() {
   pfProjectedBalance.textContent = formatCurrency(pfProjection.projectedBalance);
   pfProjectionMonthlyDeposit.textContent = formatCurrency(pfProjection.monthlyDeposit);
   pfProjectionMonths.textContent = String(pfProjection.monthsElapsed);
-  setPfProjectionStatus(`Projected from saved baseline on ${formatDate(pfProjection.savedAt)}. Validate by logging into EPFO manually.`);
+  setPfProjectionStatus(`Projected from saved baseline on ${formatDate(pfProjection.savedAt)}. Optional validation by logging into EPFO is recommended.`);
 }
 
 async function importNpsFromEmail() {
@@ -649,7 +649,7 @@ function buildWorkbookXml(pfResult, npsResult, pfProjectionResult) {
       ["Combined Total", combinedValue],
       ["PF actual/imported value", actualPfValue],
       ["PF projected value", projectedPfValue],
-      ["PF projection requires EPFO validation", pfProjectionResult ? "Yes - manually log into EPFO and compare" : ""]
+      ["PF projection validation", pfProjectionResult ? "Optional but recommended - manually log into EPFO and compare" : ""]
     ]),
     worksheetXml("PF Summary", [
       ["Metric", "Value"],
@@ -670,7 +670,7 @@ function buildWorkbookXml(pfResult, npsResult, pfProjectionResult) {
       ["Projection as of", pfProjectionResult ? formatDate(pfProjectionResult.asOf) : ""],
       ["Completed months elapsed", pfProjectionResult?.monthsElapsed ?? null],
       ["Projected PF balance", pfProjectionResult?.projectedBalance ?? null],
-      ["Validation required", pfProjectionResult ? "Manually log into EPFO and compare with official current balance" : ""]
+      ["Validation recommendation", pfProjectionResult ? "Optional but recommended: manually log into EPFO and compare with official current balance" : ""]
     ]),
     worksheetXml("PF Company Wise", [
       ["Company", "Member IDs", "Rows", "Employee Contribution", "Employer Contribution", "Pension / EPS", "Total Contribution", "Latest Balance"],
