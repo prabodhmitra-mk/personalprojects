@@ -321,11 +321,20 @@ textarea:focus {
   color: white;
 }
 
+.summary-card.projection-total {
+  background: linear-gradient(135deg, #9a5b00, #d39118);
+  color: white;
+}
+
 .summary-card.total span {
   color: rgba(255, 255, 255, 0.78);
 }
 
 .summary-card.nps-total span {
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.summary-card.projection-total span {
   color: rgba(255, 255, 255, 0.78);
 }
 

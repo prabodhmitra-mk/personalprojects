@@ -1,5 +1,10 @@
 import { formatCurrency, parsePassbookInput } from "./epfoParser.js";
 import { parseNpsInput } from "./npsParser.js";
+import {
+  PF_PROJECTION_STORAGE_KEY,
+  calculatePfProjection,
+  createPfProjectionBaseline
+} from "./pfProjection.js";
 
 const EPFO_PASSBOOK_URL = "https://passbook.epfindia.gov.in/MemberPassBook/Login";
 const NPS_PORTAL_URL = "https://cra-nsdl.com/CRA/";
@@ -32,9 +37,19 @@ const npsEmailMailbox = document.querySelector("#nps-email-mailbox");
 const npsEmailSubject = document.querySelector("#nps-email-subject");
 const npsEmailSinceDays = document.querySelector("#nps-email-since-days");
 const npsAttachmentPassword = document.querySelector("#nps-attachment-password");
+const pfBaselineBalance = document.querySelector("#pf-baseline-balance");
+const pfBaselineEmployee = document.querySelector("#pf-baseline-employee");
+const pfBaselineEmployer = document.querySelector("#pf-baseline-employer");
+const savePfProjectionButton = document.querySelector("#save-pf-projection");
+const validatePfProjectionButton = document.querySelector("#validate-pf-projection");
+const clearPfProjectionButton = document.querySelector("#clear-pf-projection");
+const pfProjectionStatus = document.querySelector("#pf-projection-status");
 const dashboard = document.querySelector("#dashboard");
 const portfolioTotal = document.querySelector("#portfolio-total");
 const totalBalance = document.querySelector("#total-balance");
+const pfProjectedBalance = document.querySelector("#pf-projected-balance");
+const pfProjectionMonthlyDeposit = document.querySelector("#pf-projection-monthly-deposit");
+const pfProjectionMonths = document.querySelector("#pf-projection-months");
 const npsTotalValue = document.querySelector("#nps-total-value");
 const employeeTotal = document.querySelector("#employee-total");
 const employerTotal = document.querySelector("#employer-total");
@@ -54,6 +69,8 @@ const recordList = document.querySelector("#record-list");
 let lastPfResult = null;
 let lastNpsResult = null;
 let lastRemoteImportId = null;
+let pfProjectionBaseline = loadPfProjectionBaseline();
+let pfProjection = calculatePfProjection(pfProjectionBaseline);
 
 openPortalButton.addEventListener("click", () => {
   window.open(EPFO_PASSBOOK_URL, "_blank", "noopener,noreferrer");
@@ -91,6 +108,12 @@ parseButton.addEventListener("click", parseAndRender);
 parseNpsButton.addEventListener("click", parseNpsAndRender);
 importNpsEmailButton.addEventListener("click", importNpsFromEmail);
 llmButton.addEventListener("click", runLocalLlmExtraction);
+savePfProjectionButton.addEventListener("click", savePfProjectionBaseline);
+clearPfProjectionButton.addEventListener("click", clearPfProjectionBaseline);
+validatePfProjectionButton.addEventListener("click", () => {
+  window.open(EPFO_PASSBOOK_URL, "_blank", "noopener,noreferrer");
+  setPfProjectionStatus("Opened EPFO. Log in manually and compare the projected PF balance with the official current balance.");
+});
 
 clearButton.addEventListener("click", () => {
   passbookInput.value = "";
@@ -140,13 +163,16 @@ Tier I Government Securities Scheme G 7,800.0000 49.50 3,86,000`;
 });
 
 downloadXlsButton.addEventListener("click", () => {
-  if (!lastPfResult && !lastNpsResult) {
+  if (!lastPfResult && !lastNpsResult && !pfProjection) {
     setStatus("Import PF or NPS content before downloading an XLS file.");
     return;
   }
 
-  downloadWorkbook(lastPfResult, lastNpsResult);
+  downloadWorkbook(lastPfResult, lastNpsResult, pfProjection);
 });
+
+restorePfProjectionUi();
+refreshPortfolioSummary();
 
 function parseAndRender() {
   const result = parsePassbookInput(passbookInput.value);
@@ -174,6 +200,72 @@ function parseNpsAndRender() {
   }
 
   renderNpsResult(result, `Detected NPS value ${result.formattedTotalValue} from ${result.lineCount} imported lines. Review it against the NPS portal before relying on it.`);
+}
+
+function savePfProjectionBaseline() {
+  try {
+    pfProjectionBaseline = createPfProjectionBaseline({
+      currentBalance: pfBaselineBalance.value,
+      employeeContribution: pfBaselineEmployee.value,
+      employerContribution: pfBaselineEmployer.value
+    });
+    localStorage.setItem(PF_PROJECTION_STORAGE_KEY, JSON.stringify(pfProjectionBaseline));
+    pfProjection = calculatePfProjection(pfProjectionBaseline);
+    renderPfProjection();
+    refreshPortfolioSummary();
+    setPfProjectionStatus("Saved PF projection baseline locally. Download local XLS to keep an Excel copy, and validate by manually logging into EPFO.");
+  } catch (error) {
+    setPfProjectionStatus(error.message);
+  }
+}
+
+function clearPfProjectionBaseline() {
+  pfProjectionBaseline = null;
+  pfProjection = null;
+  localStorage.removeItem(PF_PROJECTION_STORAGE_KEY);
+  pfBaselineBalance.value = "";
+  pfBaselineEmployee.value = "";
+  pfBaselineEmployer.value = "";
+  renderPfProjection();
+  refreshPortfolioSummary();
+  setPfProjectionStatus("Cleared saved PF projection baseline.");
+}
+
+function loadPfProjectionBaseline() {
+  try {
+    const raw = localStorage.getItem(PF_PROJECTION_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+function restorePfProjectionUi() {
+  if (!pfProjectionBaseline) {
+    renderPfProjection();
+    return;
+  }
+
+  pfBaselineBalance.value = pfProjectionBaseline.currentBalance;
+  pfBaselineEmployee.value = pfProjectionBaseline.employeeContribution;
+  pfBaselineEmployer.value = pfProjectionBaseline.employerContribution;
+  pfProjection = calculatePfProjection(pfProjectionBaseline);
+  renderPfProjection();
+}
+
+function renderPfProjection() {
+  if (!pfProjection) {
+    pfProjectedBalance.textContent = "-";
+    pfProjectionMonthlyDeposit.textContent = "-";
+    pfProjectionMonths.textContent = "-";
+    setPfProjectionStatus("No saved PF projection baseline yet.");
+    return;
+  }
+
+  pfProjectedBalance.textContent = formatCurrency(pfProjection.projectedBalance);
+  pfProjectionMonthlyDeposit.textContent = formatCurrency(pfProjection.monthlyDeposit);
+  pfProjectionMonths.textContent = String(pfProjection.monthsElapsed);
+  setPfProjectionStatus(`Projected from saved baseline on ${formatDate(pfProjection.savedAt)}. Validate by logging into EPFO manually.`);
 }
 
 async function importNpsFromEmail() {
@@ -316,13 +408,13 @@ function resetNpsView() {
 }
 
 function refreshPortfolioSummary() {
-  const pfValue = lastPfResult?.totalBalance ?? null;
+  const pfValue = lastPfResult?.totalBalance ?? pfProjection?.projectedBalance ?? null;
   const npsValue = lastNpsResult?.totalValue ?? null;
   const total = sumNullable([pfValue, npsValue]);
 
   portfolioTotal.textContent = total === null ? "-" : formatCurrency(total);
-  dashboard.hidden = !lastPfResult && !lastNpsResult;
-  downloadXlsButton.disabled = !lastPfResult && !lastNpsResult;
+  dashboard.hidden = !lastPfResult && !lastNpsResult && !pfProjection;
+  downloadXlsButton.disabled = !lastPfResult && !lastNpsResult && !pfProjection;
 }
 
 pollLatestImport();
@@ -526,8 +618,8 @@ function sumNullable(values) {
   return presentValues.reduce((total, value) => total + value, 0);
 }
 
-function downloadWorkbook(pfResult, npsResult) {
-  const workbook = buildWorkbookXml(pfResult, npsResult);
+function downloadWorkbook(pfResult, npsResult, pfProjectionResult) {
+  const workbook = buildWorkbookXml(pfResult, npsResult, pfProjectionResult);
   const blob = new Blob([workbook], {
     type: "application/vnd.ms-excel;charset=utf-8"
   });
@@ -543,16 +635,21 @@ function downloadWorkbook(pfResult, npsResult) {
   setStatus("Downloaded an Excel-compatible XLS workbook with Summary, PF, and NPS sheets.");
 }
 
-function buildWorkbookXml(pfResult, npsResult) {
-  const pfValue = pfResult?.totalBalance ?? null;
+function buildWorkbookXml(pfResult, npsResult, pfProjectionResult) {
+  const actualPfValue = pfResult?.totalBalance ?? null;
+  const projectedPfValue = pfProjectionResult?.projectedBalance ?? null;
+  const pfValue = actualPfValue ?? projectedPfValue;
   const npsValue = npsResult?.totalValue ?? null;
   const combinedValue = sumNullable([pfValue, npsValue]);
   const worksheets = [
     worksheetXml("Summary", [
-      ["Asset", "Total Value"],
-      ["PF / EPFO", pfValue],
+      ["Asset", "Total Value", "Source"],
+      ["PF / EPFO", pfValue, actualPfValue !== null ? "Official/imported PF value" : projectedPfValue !== null ? "Projected PF value" : ""],
       ["NPS", npsValue],
-      ["Combined Total", combinedValue]
+      ["Combined Total", combinedValue],
+      ["PF actual/imported value", actualPfValue],
+      ["PF projected value", projectedPfValue],
+      ["PF projection requires EPFO validation", pfProjectionResult ? "Yes - manually log into EPFO and compare" : ""]
     ]),
     worksheetXml("PF Summary", [
       ["Metric", "Value"],
@@ -562,6 +659,18 @@ function buildWorkbookXml(pfResult, npsResult) {
       ["Pension / EPS", pfResult?.totals.pension ?? null],
       ["Detection source", pfResult ? formatSource(pfResult.balanceSource) : ""],
       ["Parser confidence", pfResult ? `${Math.round(pfResult.confidence * 100)}%` : ""]
+    ]),
+    worksheetXml("PF Projection", [
+      ["Metric", "Value"],
+      ["Saved baseline current balance", pfProjectionResult?.currentBalance ?? null],
+      ["Last month employee contribution", pfProjectionResult?.employeeContribution ?? null],
+      ["Last month employer contribution", pfProjectionResult?.employerContribution ?? null],
+      ["Assumed monthly deposit", pfProjectionResult?.monthlyDeposit ?? null],
+      ["Saved at", pfProjectionResult ? formatDate(pfProjectionResult.savedAt) : ""],
+      ["Projection as of", pfProjectionResult ? formatDate(pfProjectionResult.asOf) : ""],
+      ["Completed months elapsed", pfProjectionResult?.monthsElapsed ?? null],
+      ["Projected PF balance", pfProjectionResult?.projectedBalance ?? null],
+      ["Validation required", pfProjectionResult ? "Manually log into EPFO and compare with official current balance" : ""]
     ]),
     worksheetXml("PF Company Wise", [
       ["Company", "Member IDs", "Rows", "Employee Contribution", "Employer Contribution", "Pension / EPS", "Total Contribution", "Latest Balance"],
@@ -685,6 +794,10 @@ function setStatus(message) {
   statusMessage.textContent = message;
 }
 
+function setPfProjectionStatus(message) {
+  pfProjectionStatus.textContent = message;
+}
+
 function setLocalImportStatus(message) {
   if (localImportStatus) {
     localImportStatus.textContent = message;
@@ -700,6 +813,14 @@ function formatImportedAt(value) {
     hour: "2-digit",
     minute: "2-digit",
     second: "2-digit"
+  }).format(new Date(value));
+}
+
+function formatDate(value) {
+  return new Intl.DateTimeFormat("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric"
   }).format(new Date(value));
 }
 
