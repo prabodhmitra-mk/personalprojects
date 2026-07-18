@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { createReadStream, existsSync, statSync } from "node:fs";
 import { createServer } from "node:http";
 import { extname, join, normalize } from "node:path";
@@ -5,6 +6,9 @@ import { fileURLToPath } from "node:url";
 
 const root = fileURLToPath(new URL(".", import.meta.url));
 const port = Number(process.env.PORT || 5173);
+const maxImportSizeBytes = 8 * 1024 * 1024;
+
+let latestImport = null;
 
 const mimeTypes = {
   ".css": "text/css; charset=utf-8",
@@ -29,8 +33,111 @@ function resolveRequestPath(urlPath) {
   return join(root, "index.html");
 }
 
+function sendJson(response, statusCode, payload) {
+  response.writeHead(statusCode, {
+    "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Allow-Methods": "DELETE, GET, OPTIONS, POST",
+    "Access-Control-Allow-Origin": "*",
+    "Cache-Control": "no-store",
+    "Content-Type": "application/json; charset=utf-8"
+  });
+  response.end(JSON.stringify(payload));
+}
+
+function readJsonBody(request) {
+  return new Promise((resolve, reject) => {
+    let body = "";
+
+    request.on("data", (chunk) => {
+      body += chunk;
+
+      if (Buffer.byteLength(body) > maxImportSizeBytes) {
+        reject(new Error("Imported EPFO page is too large."));
+        request.destroy();
+      }
+    });
+
+    request.on("end", () => {
+      try {
+        resolve(JSON.parse(body || "{}"));
+      } catch {
+        reject(new Error("Request body must be valid JSON."));
+      }
+    });
+
+    request.on("error", reject);
+  });
+}
+
+async function handleApiRequest(request, response, url) {
+  if (request.method === "OPTIONS") {
+    sendJson(response, 204, {});
+    return true;
+  }
+
+  if (url.pathname === "/api/latest-import" && request.method === "GET") {
+    sendJson(response, 200, { import: latestImport });
+    return true;
+  }
+
+  if (url.pathname === "/api/latest-import" && request.method === "DELETE") {
+    latestImport = null;
+    sendJson(response, 200, { ok: true });
+    return true;
+  }
+
+  if (url.pathname === "/api/import" && request.method === "POST") {
+    try {
+      const payload = await readJsonBody(request);
+      const pageText = String(payload.pageText || "").trim();
+
+      if (!pageText) {
+        sendJson(response, 400, { error: "pageText is required." });
+        return true;
+      }
+
+      latestImport = {
+        id: randomUUID(),
+        importedAt: new Date().toISOString(),
+        pageText,
+        sourceUrl: String(payload.sourceUrl || ""),
+        title: String(payload.title || "")
+      };
+
+      sendJson(response, 200, {
+        ok: true,
+        id: latestImport.id,
+        importedAt: latestImport.importedAt,
+        length: pageText.length
+      });
+    } catch (error) {
+      sendJson(response, 400, { error: error.message });
+    }
+
+    return true;
+  }
+
+  if (url.pathname.startsWith("/api/")) {
+    sendJson(response, 404, { error: "Not found." });
+    return true;
+  }
+
+  return false;
+}
+
 const server = createServer((request, response) => {
   const url = new URL(request.url || "/", `http://${request.headers.host}`);
+
+  handleApiRequest(request, response, url).then((handled) => {
+    if (handled) {
+      return;
+    }
+
+    serveStaticFile(url, response);
+  });
+});
+
+function serveStaticFile(url, response) {
   const filePath = resolveRequestPath(url.pathname);
 
   if (!filePath) {
@@ -45,7 +152,7 @@ const server = createServer((request, response) => {
   });
 
   createReadStream(filePath).pipe(response);
-});
+}
 
 server.listen(port, () => {
   console.log(`EPFO balance dashboard running at http://localhost:${port}`);

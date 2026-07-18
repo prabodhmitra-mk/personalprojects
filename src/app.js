@@ -10,6 +10,7 @@ const clearButton = document.querySelector("#clear-data");
 const sampleButton = document.querySelector("#load-sample");
 const downloadXlsButton = document.querySelector("#download-xls");
 const statusMessage = document.querySelector("#status-message");
+const localImportStatus = document.querySelector("#local-import-status");
 const dashboard = document.querySelector("#dashboard");
 const totalBalance = document.querySelector("#total-balance");
 const employeeTotal = document.querySelector("#employee-total");
@@ -23,10 +24,11 @@ const warningList = document.querySelector("#warning-list");
 const recordList = document.querySelector("#record-list");
 
 let lastParseResult = null;
+let lastRemoteImportId = null;
 
 openPortalButton.addEventListener("click", () => {
   window.open(EPFO_PASSBOOK_URL, "_blank", "noopener,noreferrer");
-  setStatus("Opened the official EPFO passbook portal in a new tab. Log in there, then copy the passbook table or downloaded HTML/text here.");
+  setStatus("Opened the official EPFO passbook portal in a new tab. Log in there, open the passbook, then use the browser extension import button or paste/download manually.");
 });
 
 fileInput.addEventListener("change", async (event) => {
@@ -104,6 +106,42 @@ function parseAndRender() {
   setStatus(`Detected ${result.formattedTotalBalance} from ${result.lineCount} imported lines across ${result.companySummaries.length || 1} company group(s). Review it against EPFO before relying on it.`);
 }
 
+pollLatestImport();
+setInterval(pollLatestImport, 2500);
+
+async function pollLatestImport() {
+  try {
+    const response = await fetch("/api/latest-import", {
+      cache: "no-store"
+    });
+
+    if (!response.ok) {
+      setLocalImportStatus("Local importer is unavailable. Start the app with npm start.");
+      return;
+    }
+
+    const payload = await response.json();
+    const latestImport = payload.import;
+
+    if (!latestImport) {
+      setLocalImportStatus("Waiting for browser extension import from an EPFO tab.");
+      return;
+    }
+
+    if (latestImport.id === lastRemoteImportId) {
+      setLocalImportStatus(`Last browser import received at ${formatImportedAt(latestImport.importedAt)}.`);
+      return;
+    }
+
+    lastRemoteImportId = latestImport.id;
+    passbookInput.value = latestImport.pageText;
+    parseAndRender();
+    setLocalImportStatus(`Imported visible EPFO page from browser extension at ${formatImportedAt(latestImport.importedAt)}.`);
+  } catch {
+    setLocalImportStatus("Local importer is unavailable. Start the app with npm start.");
+  }
+}
+
 function renderComponents(components) {
   componentList.innerHTML = "";
 
@@ -158,7 +196,7 @@ function renderRecords(records) {
   recordList.innerHTML = "";
 
   if (records.length === 0) {
-    recordList.innerHTML = `<tr><td colspan="5">No monthly rows detected.</td></tr>`;
+    recordList.innerHTML = `<tr><td colspan="6">No monthly rows detected.</td></tr>`;
     return;
   }
 
@@ -299,6 +337,20 @@ function formatSource(value) {
 
 function setStatus(message) {
   statusMessage.textContent = message;
+}
+
+function setLocalImportStatus(message) {
+  if (localImportStatus) {
+    localImportStatus.textContent = message;
+  }
+}
+
+function formatImportedAt(value) {
+  return new Intl.DateTimeFormat("en-IN", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit"
+  }).format(new Date(value));
 }
 
 function maskMemberId(memberId) {

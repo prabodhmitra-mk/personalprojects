@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>EPFO Local Importer</title>
+    <link rel="stylesheet" href="./popup.css">
+    <script src="./popup.js" defer></script>
+  </head>
+  <body>
+    <main>
+      <p class="eyebrow">EPFO Local Importer</p>
+      <h1>Send visible passbook to dashboard</h1>
+      <p>
+        Log in to EPFO manually, open your passbook page, then click import.
+        The extension sends visible page text to your local app only.
+      </p>
+      <button id="import-passbook" type="button">Import visible passbook</button>
+      <button id="open-dashboard" type="button">Open local dashboard</button>
+      <p id="status" class="status">Waiting for your action.</p>
+    </main>
+  </body>
+</html>

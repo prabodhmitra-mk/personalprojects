@@ -1,0 +1,22 @@
+{
+  "manifest_version": 3,
+  "name": "EPFO Local Importer",
+  "version": "0.1.0",
+  "description": "Imports the visible EPFO passbook page into the local EPFO Balance Dashboard after user confirmation.",
+  "permissions": ["activeTab"],
+  "host_permissions": [
+    "https://passbook.epfindia.gov.in/*",
+    "http://localhost:5173/*"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Import EPFO passbook"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://passbook.epfindia.gov.in/*"],
+      "js": ["content-script.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}

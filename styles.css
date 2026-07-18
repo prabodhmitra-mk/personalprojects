@@ -90,6 +90,15 @@ p {
   margin-top: 0;
 }
 
+code {
+  background: #e8f1ff;
+  border-radius: 0.35rem;
+  color: var(--primary-dark);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size: 0.9em;
+  padding: 0.1rem 0.3rem;
+}
+
 h1 {
   font-size: clamp(2.1rem, 5vw, 4.4rem);
   letter-spacing: -0.06em;
@@ -170,6 +179,13 @@ h2 {
 .hint {
   font-size: 0.92rem;
   margin: 1rem 0 0;
+}
+
+.compact-list {
+  color: var(--muted);
+  line-height: 1.6;
+  margin: 0;
+  padding-left: 1.3rem;
 }
 
 .file-picker {
