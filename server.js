@@ -149,7 +149,7 @@ async function handleApiRequest(request, response, url) {
         ok: false,
         error: error.name === "AbortError"
           ? "Local LLM timed out. Try a smaller model or shorter page content."
-          : error.message
+          : formatLlmError(error)
       });
     }
 
@@ -162,6 +162,14 @@ async function handleApiRequest(request, response, url) {
   }
 
   return false;
+}
+
+function formatLlmError(error) {
+  if (/fetch failed|ECONNREFUSED|ECONNRESET/i.test(error.message || "")) {
+    return "Local Ollama is not reachable at http://127.0.0.1:11434. Start Ollama and pull the selected model.";
+  }
+
+  return error.message;
 }
 
 const server = createServer((request, response) => {
