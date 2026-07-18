@@ -85,9 +85,59 @@
 
         <article class="panel">
           <span class="step">4</span>
-          <h2>Import NPS holdings/statement</h2>
+          <h2>Import NPS statement from email</h2>
           <p>
-            Open the official NPS CRA portal, log in yourself, then copy or export your holdings/statement text here.
+            The local server can read recent emails where the subject contains <strong>nps</strong> and
+            <strong>statement</strong>, then parse supported attachments. Credentials are used for this request only.
+          </p>
+          <div class="settings-grid">
+            <label>
+              <span>IMAP host</span>
+              <input id="nps-email-host" type="text" value="imap.gmail.com" spellcheck="false">
+            </label>
+            <label>
+              <span>Port</span>
+              <input id="nps-email-port" type="number" value="993">
+            </label>
+            <label>
+              <span>Email username</span>
+              <input id="nps-email-username" type="email" autocomplete="username" spellcheck="false">
+            </label>
+            <label>
+              <span>Email/app password</span>
+              <input id="nps-email-password" type="password" autocomplete="current-password">
+            </label>
+            <label>
+              <span>Mailbox</span>
+              <input id="nps-email-mailbox" type="text" value="INBOX" spellcheck="false">
+            </label>
+            <label>
+              <span>Subject keywords</span>
+              <input id="nps-email-subject" type="text" value="nps,statement" spellcheck="false">
+            </label>
+            <label>
+              <span>Look back days</span>
+              <input id="nps-email-since-days" type="number" value="365" min="1">
+            </label>
+            <label>
+              <span>NPS attachment password</span>
+              <input id="nps-attachment-password" type="password">
+            </label>
+          </div>
+          <div class="actions">
+            <button id="import-nps-email" class="primary" type="button">Read NPS email statement</button>
+          </div>
+          <p class="hint">
+            Gmail usually requires an app password with IMAP enabled. The NPS statement password is only used to open the attachment.
+          </p>
+          <p id="nps-email-status-message" class="status">Waiting for NPS email import settings.</p>
+        </article>
+
+        <article class="panel">
+          <span class="step">5</span>
+          <h2>Import NPS holdings/statement manually</h2>
+          <p>
+            You can still open the official NPS CRA portal, log in yourself, then copy or export your holdings/statement text here.
           </p>
           <button id="open-nps-portal" class="primary" type="button">Open NPS CRA portal</button>
           <label class="file-picker">

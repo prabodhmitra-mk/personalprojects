@@ -12,6 +12,7 @@ const passbookInput = document.querySelector("#passbook-input");
 const npsInput = document.querySelector("#nps-input");
 const parseButton = document.querySelector("#parse-passbook");
 const parseNpsButton = document.querySelector("#parse-nps");
+const importNpsEmailButton = document.querySelector("#import-nps-email");
 const llmButton = document.querySelector("#llm-extract");
 const llmModelInput = document.querySelector("#llm-model");
 const clearButton = document.querySelector("#clear-data");
@@ -21,7 +22,16 @@ const sampleNpsButton = document.querySelector("#load-nps-sample");
 const downloadXlsButton = document.querySelector("#download-xls");
 const statusMessage = document.querySelector("#status-message");
 const npsStatusMessage = document.querySelector("#nps-status-message");
+const npsEmailStatusMessage = document.querySelector("#nps-email-status-message");
 const localImportStatus = document.querySelector("#local-import-status");
+const npsEmailHost = document.querySelector("#nps-email-host");
+const npsEmailPort = document.querySelector("#nps-email-port");
+const npsEmailUsername = document.querySelector("#nps-email-username");
+const npsEmailPassword = document.querySelector("#nps-email-password");
+const npsEmailMailbox = document.querySelector("#nps-email-mailbox");
+const npsEmailSubject = document.querySelector("#nps-email-subject");
+const npsEmailSinceDays = document.querySelector("#nps-email-since-days");
+const npsAttachmentPassword = document.querySelector("#nps-attachment-password");
 const dashboard = document.querySelector("#dashboard");
 const portfolioTotal = document.querySelector("#portfolio-total");
 const totalBalance = document.querySelector("#total-balance");
@@ -79,6 +89,7 @@ npsFileInput.addEventListener("change", async (event) => {
 
 parseButton.addEventListener("click", parseAndRender);
 parseNpsButton.addEventListener("click", parseNpsAndRender);
+importNpsEmailButton.addEventListener("click", importNpsFromEmail);
 llmButton.addEventListener("click", runLocalLlmExtraction);
 
 clearButton.addEventListener("click", () => {
@@ -163,6 +174,52 @@ function parseNpsAndRender() {
   }
 
   renderNpsResult(result, `Detected NPS value ${result.formattedTotalValue} from ${result.lineCount} imported lines. Review it against the NPS portal before relying on it.`);
+}
+
+async function importNpsFromEmail() {
+  importNpsEmailButton.disabled = true;
+  setNpsEmailStatus("Connecting to mailbox and looking for NPS statement attachments...");
+
+  try {
+    const response = await fetch("/api/nps-email-import", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        host: npsEmailHost.value.trim(),
+        port: Number(npsEmailPort.value || 993),
+        secure: true,
+        username: npsEmailUsername.value.trim(),
+        password: npsEmailPassword.value,
+        mailbox: npsEmailMailbox.value.trim() || "INBOX",
+        subjectKeywords: npsEmailSubject.value.trim() || "nps,statement",
+        sinceDays: Number(npsEmailSinceDays.value || 365),
+        attachmentPassword: npsAttachmentPassword.value
+      })
+    });
+    const payload = await response.json();
+
+    if (!response.ok || !payload.ok) {
+      throw new Error(payload.error || "NPS email import failed.");
+    }
+
+    if (!payload.statementText) {
+      const attachmentErrors = payload.attachments
+        .filter((attachment) => attachment.error)
+        .map((attachment) => `${attachment.filename}: ${attachment.error}`)
+        .join("; ");
+      throw new Error(attachmentErrors || "No readable NPS statement attachment was found.");
+    }
+
+    npsInput.value = payload.statementText;
+    parseNpsAndRender();
+    setNpsEmailStatus(`Imported ${payload.attachmentCount} attachment(s) from ${payload.messageCount} email(s). Parsed ${payload.textLength.toLocaleString("en-IN")} characters.`);
+  } catch (error) {
+    setNpsEmailStatus(`NPS email import failed: ${error.message}`);
+  } finally {
+    importNpsEmailButton.disabled = false;
+  }
 }
 
 async function runLocalLlmExtraction() {
@@ -632,6 +689,10 @@ function setLocalImportStatus(message) {
   if (localImportStatus) {
     localImportStatus.textContent = message;
   }
+}
+
+function setNpsEmailStatus(message) {
+  npsEmailStatusMessage.textContent = message;
 }
 
 function formatImportedAt(value) {

@@ -11,7 +11,7 @@ A small privacy-first web app that helps you get total values from your EPFO pas
    - use the browser extension to import the visible EPFO page automatically, or
    - copy the passbook table/page text or save an HTML/TXT/CSV export manually.
 5. Click **Get total balance** if you imported manually. Extension imports are parsed automatically.
-6. Open the official NPS CRA portal, log in yourself, and import copied/downloaded NPS holdings or statement content.
+6. Import NPS from email attachments or manually import copied/downloaded NPS holdings or statement content.
 7. Optionally click **Ask local LLM** if the rule-based PF parser cannot understand a changed EPFO format.
 8. Review PF, NPS, and combined portfolio totals.
 9. Click **Download local XLS** to save an Excel-compatible workbook on your machine.
@@ -66,7 +66,45 @@ You can still click the extension icon manually if the prompt does not appear.
 
 ## Import NPS data
 
-Use the NPS section in the dashboard:
+### Option 1: Read NPS statements from email
+
+Use the NPS email section in the dashboard:
+
+1. Enter IMAP host/port. For Gmail, use:
+
+   ```text
+   imap.gmail.com
+   ```
+
+2. Enter your email username.
+3. Enter your email/app password. For Gmail, this usually means a Google app password with IMAP enabled.
+4. Keep subject keywords as:
+
+   ```text
+   nps,statement
+   ```
+
+5. Enter the NPS attachment/PDF password.
+6. Click **Read NPS email statement**.
+
+The local server searches recent emails whose subject contains all configured keywords, reads supported attachments, extracts statement text, and runs the NPS parser.
+
+Supported attachment types:
+
+- Password-protected PDF
+- Text
+- HTML
+- CSV
+
+Security notes:
+
+- Email credentials and attachment password are sent only to the local `npm start` server for that request.
+- They are not saved in local storage or written to disk by the app.
+- Use an app password instead of your main mailbox password where possible.
+
+### Option 2: Manual NPS import
+
+Use the manual NPS section in the dashboard:
 
 1. Click **Open NPS CRA portal**.
 2. Log in manually on the official NPS site.

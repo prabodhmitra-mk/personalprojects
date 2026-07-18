@@ -5,6 +5,7 @@ import { extname, join, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { DEFAULT_OLLAMA_MODEL, extractWithOllama } from "./src/llmExtractor.js";
+import { importNpsStatementsFromEmail } from "./src/npsEmailImporter.js";
 
 const root = fileURLToPath(new URL(".", import.meta.url));
 const port = Number(process.env.PORT || 5173);
@@ -156,6 +157,22 @@ async function handleApiRequest(request, response, url) {
     return true;
   }
 
+  if (url.pathname === "/api/nps-email-import" && request.method === "POST") {
+    try {
+      const payload = await readJsonBody(request);
+      const result = await importNpsStatementsFromEmail(payload);
+
+      sendJson(response, 200, result);
+    } catch (error) {
+      sendJson(response, 400, {
+        ok: false,
+        error: formatEmailImportError(error)
+      });
+    }
+
+    return true;
+  }
+
   if (url.pathname.startsWith("/api/")) {
     sendJson(response, 404, { error: "Not found." });
     return true;
@@ -167,6 +184,18 @@ async function handleApiRequest(request, response, url) {
 function formatLlmError(error) {
   if (/fetch failed|ECONNREFUSED|ECONNRESET/i.test(error.message || "")) {
     return "Local Ollama is not reachable at http://127.0.0.1:11434. Start Ollama and pull the selected model.";
+  }
+
+  return error.message;
+}
+
+function formatEmailImportError(error) {
+  if (/authentication|invalid credentials|login/i.test(error.message || "")) {
+    return "Could not log in to the mailbox. Check your email/app password and IMAP settings.";
+  }
+
+  if (/ENOTFOUND|ECONNREFUSED|ETIMEDOUT|network|certificate/i.test(error.message || "")) {
+    return "Could not connect to the IMAP server. Check host, port, secure setting, and network access.";
   }
 
   return error.message;
