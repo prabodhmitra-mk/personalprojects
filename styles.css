@@ -290,7 +290,16 @@ textarea:focus {
   color: white;
 }
 
+.summary-card.nps-total {
+  background: linear-gradient(135deg, #5b38d6, #b34eb5);
+  color: white;
+}
+
 .summary-card.total span {
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.summary-card.nps-total span {
   color: rgba(255, 255, 255, 0.78);
 }
 

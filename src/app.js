@@ -1,36 +1,58 @@
 import { formatCurrency, parsePassbookInput } from "./epfoParser.js";
+import { parseNpsInput } from "./npsParser.js";
 
 const EPFO_PASSBOOK_URL = "https://passbook.epfindia.gov.in/MemberPassBook/Login";
+const NPS_PORTAL_URL = "https://cra-nsdl.com/CRA/";
 
 const openPortalButton = document.querySelector("#open-portal");
+const openNpsPortalButton = document.querySelector("#open-nps-portal");
 const fileInput = document.querySelector("#passbook-file");
+const npsFileInput = document.querySelector("#nps-file");
 const passbookInput = document.querySelector("#passbook-input");
+const npsInput = document.querySelector("#nps-input");
 const parseButton = document.querySelector("#parse-passbook");
+const parseNpsButton = document.querySelector("#parse-nps");
 const llmButton = document.querySelector("#llm-extract");
 const llmModelInput = document.querySelector("#llm-model");
 const clearButton = document.querySelector("#clear-data");
+const clearNpsButton = document.querySelector("#clear-nps");
 const sampleButton = document.querySelector("#load-sample");
+const sampleNpsButton = document.querySelector("#load-nps-sample");
 const downloadXlsButton = document.querySelector("#download-xls");
 const statusMessage = document.querySelector("#status-message");
+const npsStatusMessage = document.querySelector("#nps-status-message");
 const localImportStatus = document.querySelector("#local-import-status");
 const dashboard = document.querySelector("#dashboard");
+const portfolioTotal = document.querySelector("#portfolio-total");
 const totalBalance = document.querySelector("#total-balance");
+const npsTotalValue = document.querySelector("#nps-total-value");
 const employeeTotal = document.querySelector("#employee-total");
 const employerTotal = document.querySelector("#employer-total");
 const pensionTotal = document.querySelector("#pension-total");
+const npsContributionTotal = document.querySelector("#nps-contribution-total");
 const confidence = document.querySelector("#confidence");
 const source = document.querySelector("#source");
+const npsConfidence = document.querySelector("#nps-confidence");
+const npsSource = document.querySelector("#nps-source");
 const componentList = document.querySelector("#component-list");
 const companyList = document.querySelector("#company-list");
+const npsHoldingList = document.querySelector("#nps-holding-list");
 const warningList = document.querySelector("#warning-list");
+const npsWarningList = document.querySelector("#nps-warning-list");
 const recordList = document.querySelector("#record-list");
 
-let lastParseResult = null;
+let lastPfResult = null;
+let lastNpsResult = null;
 let lastRemoteImportId = null;
 
 openPortalButton.addEventListener("click", () => {
   window.open(EPFO_PASSBOOK_URL, "_blank", "noopener,noreferrer");
   setStatus("Opened the official EPFO passbook portal in a new tab. Log in there, open the passbook, then use the browser extension import button or paste/download manually.");
+});
+
+openNpsPortalButton.addEventListener("click", () => {
+  window.open(NPS_PORTAL_URL, "_blank", "noopener,noreferrer");
+  setNpsStatus("Opened the NPS CRA portal in a new tab. Log in there, then copy or download your holdings/statement content and import it below.");
 });
 
 fileInput.addEventListener("change", async (event) => {
@@ -44,16 +66,37 @@ fileInput.addEventListener("change", async (event) => {
   parseAndRender();
 });
 
+npsFileInput.addEventListener("change", async (event) => {
+  const [file] = event.target.files || [];
+  if (!file) {
+    return;
+  }
+
+  const text = await file.text();
+  npsInput.value = text;
+  parseNpsAndRender();
+});
+
 parseButton.addEventListener("click", parseAndRender);
+parseNpsButton.addEventListener("click", parseNpsAndRender);
 llmButton.addEventListener("click", runLocalLlmExtraction);
 
 clearButton.addEventListener("click", () => {
   passbookInput.value = "";
   fileInput.value = "";
-  lastParseResult = null;
-  dashboard.hidden = true;
-  downloadXlsButton.disabled = true;
+  lastPfResult = null;
+  resetPfView();
+  refreshPortfolioSummary();
   setStatus("Cleared imported passbook content from this page.");
+});
+
+clearNpsButton.addEventListener("click", () => {
+  npsInput.value = "";
+  npsFileInput.value = "";
+  lastNpsResult = null;
+  resetNpsView();
+  refreshPortfolioSummary();
+  setNpsStatus("Cleared imported NPS content from this page.");
 });
 
 sampleButton.addEventListener("click", () => {
@@ -72,27 +115,54 @@ Feb-2026 15,500 15,000 15,500 1,860 570 1,290 95,500`;
   parseAndRender();
 });
 
+sampleNpsButton.addEventListener("click", () => {
+  npsInput.value = `NPS Holdings Statement
+PRAN: 110012345678
+Total Contribution: Rs 4,20,000
+Total NPS Corpus: Rs 5,84,250
+
+Tier I Scheme Units NAV Current Value
+Tier I Equity Scheme E 1,250.0000 62.50 78,125
+Tier I Corporate Bond Scheme C 3,100.0000 38.75 1,20,125
+Tier I Government Securities Scheme G 7,800.0000 49.50 3,86,000`;
+  parseNpsAndRender();
+});
+
 downloadXlsButton.addEventListener("click", () => {
-  if (!lastParseResult) {
-    setStatus("Import passbook content before downloading an XLS file.");
+  if (!lastPfResult && !lastNpsResult) {
+    setStatus("Import PF or NPS content before downloading an XLS file.");
     return;
   }
 
-  downloadWorkbook(lastParseResult);
+  downloadWorkbook(lastPfResult, lastNpsResult);
 });
 
 function parseAndRender() {
   const result = parsePassbookInput(passbookInput.value);
 
   if (result.totalBalance === null) {
-    lastParseResult = null;
-    dashboard.hidden = true;
-    downloadXlsButton.disabled = true;
+    lastPfResult = null;
+    resetPfView();
+    refreshPortfolioSummary();
     setStatus(result.warnings[0] || "Could not detect a balance. Paste the full passbook text and try again.");
     return;
   }
 
   renderParsedResult(result, `Detected ${result.formattedTotalBalance} from ${result.lineCount} imported lines across ${result.companySummaries.length || 1} company group(s). Review it against EPFO before relying on it.`);
+}
+
+function parseNpsAndRender() {
+  const result = parseNpsInput(npsInput.value);
+
+  if (result.totalValue === null) {
+    lastNpsResult = null;
+    resetNpsView();
+    refreshPortfolioSummary();
+    setNpsStatus(result.warnings[0] || "Could not detect an NPS value. Paste the full NPS holding/statement text and try again.");
+    return;
+  }
+
+  renderNpsResult(result, `Detected NPS value ${result.formattedTotalValue} from ${result.lineCount} imported lines. Review it against the NPS portal before relying on it.`);
 }
 
 async function runLocalLlmExtraction() {
@@ -137,7 +207,7 @@ async function runLocalLlmExtraction() {
 }
 
 function renderParsedResult(result, statusText) {
-  lastParseResult = result;
+  lastPfResult = result;
   totalBalance.textContent = result.formattedTotalBalance;
   employeeTotal.textContent = formatOptionalCurrency(result.totals.employee);
   employerTotal.textContent = formatOptionalCurrency(result.totals.employer);
@@ -149,9 +219,53 @@ function renderParsedResult(result, statusText) {
   renderWarnings(result.warnings);
   renderRecords(result.records);
 
-  dashboard.hidden = false;
-  downloadXlsButton.disabled = false;
+  refreshPortfolioSummary();
   setStatus(statusText);
+}
+
+function renderNpsResult(result, statusText) {
+  lastNpsResult = result;
+  npsTotalValue.textContent = result.formattedTotalValue;
+  npsContributionTotal.textContent = formatOptionalCurrency(result.contributionTotal);
+  npsConfidence.textContent = `${Math.round(result.confidence * 100)}%`;
+  npsSource.textContent = formatNpsSource(result.valueSource);
+  renderNpsWarnings(result.warnings);
+  renderNpsHoldings(result.holdings);
+
+  refreshPortfolioSummary();
+  setNpsStatus(statusText);
+}
+
+function resetPfView() {
+  totalBalance.textContent = "-";
+  employeeTotal.textContent = "-";
+  employerTotal.textContent = "-";
+  pensionTotal.textContent = "-";
+  confidence.textContent = "-";
+  source.textContent = "-";
+  componentList.innerHTML = "";
+  companyList.innerHTML = `<tr><td colspan="7">No company-wise rows detected.</td></tr>`;
+  warningList.innerHTML = "";
+  recordList.innerHTML = `<tr><td colspan="6">No monthly rows detected.</td></tr>`;
+}
+
+function resetNpsView() {
+  npsTotalValue.textContent = "-";
+  npsContributionTotal.textContent = "-";
+  npsConfidence.textContent = "-";
+  npsSource.textContent = "-";
+  npsWarningList.innerHTML = "";
+  npsHoldingList.innerHTML = `<tr><td colspan="6">No NPS holdings detected.</td></tr>`;
+}
+
+function refreshPortfolioSummary() {
+  const pfValue = lastPfResult?.totalBalance ?? null;
+  const npsValue = lastNpsResult?.totalValue ?? null;
+  const total = sumNullable([pfValue, npsValue]);
+
+  portfolioTotal.textContent = total === null ? "-" : formatCurrency(total);
+  dashboard.hidden = !lastPfResult && !lastNpsResult;
+  downloadXlsButton.disabled = !lastPfResult && !lastNpsResult;
 }
 
 pollLatestImport();
@@ -240,6 +354,23 @@ function renderWarnings(warnings) {
   }
 }
 
+function renderNpsWarnings(warnings) {
+  npsWarningList.innerHTML = "";
+
+  if (warnings.length === 0) {
+    const item = document.createElement("li");
+    item.textContent = "No NPS parser warnings.";
+    npsWarningList.append(item);
+    return;
+  }
+
+  for (const warning of warnings) {
+    const item = document.createElement("li");
+    item.textContent = warning;
+    npsWarningList.append(item);
+  }
+}
+
 function renderRecords(records) {
   recordList.innerHTML = "";
 
@@ -259,6 +390,28 @@ function renderRecords(records) {
       <td>${formatOptionalCurrency(record.rowBalance)}</td>
     `;
     recordList.append(row);
+  }
+}
+
+function renderNpsHoldings(holdings) {
+  npsHoldingList.innerHTML = "";
+
+  if (holdings.length === 0) {
+    npsHoldingList.innerHTML = `<tr><td colspan="6">No NPS holdings detected.</td></tr>`;
+    return;
+  }
+
+  for (const holding of holdings) {
+    const row = document.createElement("tr");
+    row.innerHTML = `
+      <td>${escapeHtml(holding.tier || "-")}</td>
+      <td>${escapeHtml(holding.scheme)}</td>
+      <td>${numberForDisplay(holding.units)}</td>
+      <td>${formatOptionalCurrency(holding.nav)}</td>
+      <td>${formatOptionalCurrency(holding.value)}</td>
+      <td>${escapeHtml(holding.raw)}</td>
+    `;
+    npsHoldingList.append(row);
   }
 }
 
@@ -316,8 +469,8 @@ function sumNullable(values) {
   return presentValues.reduce((total, value) => total + value, 0);
 }
 
-function downloadWorkbook(result) {
-  const workbook = buildWorkbookHtml(result);
+function downloadWorkbook(pfResult, npsResult) {
+  const workbook = buildWorkbookXml(pfResult, npsResult);
   const blob = new Blob([workbook], {
     type: "application/vnd.ms-excel;charset=utf-8"
   });
@@ -330,94 +483,96 @@ function downloadWorkbook(result) {
   link.click();
   link.remove();
   URL.revokeObjectURL(link.href);
-  setStatus("Downloaded an Excel-compatible XLS file to your browser downloads folder.");
+  setStatus("Downloaded an Excel-compatible XLS workbook with Summary, PF, and NPS sheets.");
 }
 
-function buildWorkbookHtml(result) {
-  const companyRows = result.companySummaries.map((summary) => `
-    <tr>
-      <td>${escapeHtml(summary.company)}</td>
-      <td>${escapeHtml(summary.memberIds.join(", "))}</td>
-      <td>${summary.recordCount}</td>
-      <td>${numberForSheet(summary.employeeTotal)}</td>
-      <td>${numberForSheet(summary.employerTotal)}</td>
-      <td>${numberForSheet(summary.pensionTotal)}</td>
-      <td>${numberForSheet(summary.contributionTotal)}</td>
-      <td>${numberForSheet(summary.latestBalance)}</td>
-    </tr>
-  `).join("");
+function buildWorkbookXml(pfResult, npsResult) {
+  const pfValue = pfResult?.totalBalance ?? null;
+  const npsValue = npsResult?.totalValue ?? null;
+  const combinedValue = sumNullable([pfValue, npsValue]);
+  const worksheets = [
+    worksheetXml("Summary", [
+      ["Asset", "Total Value"],
+      ["PF / EPFO", pfValue],
+      ["NPS", npsValue],
+      ["Combined Total", combinedValue]
+    ]),
+    worksheetXml("PF Summary", [
+      ["Metric", "Value"],
+      ["Total EPFO balance", pfResult?.totalBalance ?? null],
+      ["Employee contribution", pfResult?.totals.employee ?? null],
+      ["Employer contribution", pfResult?.totals.employer ?? null],
+      ["Pension / EPS", pfResult?.totals.pension ?? null],
+      ["Detection source", pfResult ? formatSource(pfResult.balanceSource) : ""],
+      ["Parser confidence", pfResult ? `${Math.round(pfResult.confidence * 100)}%` : ""]
+    ]),
+    worksheetXml("PF Company Wise", [
+      ["Company", "Member IDs", "Rows", "Employee Contribution", "Employer Contribution", "Pension / EPS", "Total Contribution", "Latest Balance"],
+      ...((pfResult?.companySummaries || []).map((summary) => [
+        summary.company,
+        summary.memberIds.join(", "),
+        summary.recordCount,
+        summary.employeeTotal,
+        summary.employerTotal,
+        summary.pensionTotal,
+        summary.contributionTotal,
+        summary.latestBalance
+      ]))
+    ]),
+    worksheetXml("PF Rows", [
+      ["Company", "Member ID", "Period", "Employee Contribution", "Employer Contribution", "Pension / EPS", "Row Balance"],
+      ...((pfResult?.records || []).map((record) => [
+        record.company,
+        record.memberId || "",
+        record.period,
+        record.employeeShare,
+        record.employerShare,
+        record.pensionShare,
+        record.rowBalance
+      ]))
+    ]),
+    worksheetXml("NPS Summary", [
+      ["Metric", "Value"],
+      ["Total NPS value", npsResult?.totalValue ?? null],
+      ["Total contribution", npsResult?.contributionTotal ?? null],
+      ["PRAN", npsResult?.pran ?? ""],
+      ["Detection source", npsResult ? formatNpsSource(npsResult.valueSource) : ""],
+      ["Parser confidence", npsResult ? `${Math.round(npsResult.confidence * 100)}%` : ""]
+    ]),
+    worksheetXml("NPS Holdings", [
+      ["Tier", "Scheme", "Units", "NAV", "Current Value", "Raw"],
+      ...((npsResult?.holdings || []).map((holding) => [
+        holding.tier || "",
+        holding.scheme,
+        holding.units,
+        holding.nav,
+        holding.value,
+        holding.raw
+      ]))
+    ])
+  ];
 
-  const recordRows = result.records.map((record) => `
-    <tr>
-      <td>${escapeHtml(record.company)}</td>
-      <td>${escapeHtml(record.memberId || "")}</td>
-      <td>${escapeHtml(record.period)}</td>
-      <td>${numberForSheet(record.employeeShare)}</td>
-      <td>${numberForSheet(record.employerShare)}</td>
-      <td>${numberForSheet(record.pensionShare)}</td>
-      <td>${numberForSheet(record.rowBalance)}</td>
-    </tr>
-  `).join("");
-
-  return `<!doctype html>
-    <html>
-      <head>
-        <meta charset="utf-8">
-        <style>
-          table { border-collapse: collapse; margin-bottom: 24px; }
-          th, td { border: 1px solid #999; padding: 6px 10px; }
-          th { background: #e8f1ff; }
-        </style>
-      </head>
-      <body>
-        <h1>EPFO Balance Summary</h1>
-        <table>
-          <tr><th>Total EPFO balance</th><td>${numberForSheet(result.totalBalance)}</td></tr>
-          <tr><th>Total employee contribution</th><td>${numberForSheet(result.totals.employee)}</td></tr>
-          <tr><th>Total employer contribution</th><td>${numberForSheet(result.totals.employer)}</td></tr>
-          <tr><th>Total pension / EPS</th><td>${numberForSheet(result.totals.pension)}</td></tr>
-          <tr><th>Detection source</th><td>${escapeHtml(formatSource(result.balanceSource))}</td></tr>
-          <tr><th>Parser confidence</th><td>${Math.round(result.confidence * 100)}%</td></tr>
-        </table>
-
-        <h2>Company-wise totals</h2>
-        <table>
-          <thead>
-            <tr>
-              <th>Company</th>
-              <th>Member IDs</th>
-              <th>Rows</th>
-              <th>Employee contribution</th>
-              <th>Employer contribution</th>
-              <th>Pension / EPS</th>
-              <th>Total contribution</th>
-              <th>Latest balance</th>
-            </tr>
-          </thead>
-          <tbody>${companyRows || `<tr><td colspan="8">No company-wise rows detected.</td></tr>`}</tbody>
-        </table>
-
-        <h2>Detected rows</h2>
-        <table>
-          <thead>
-            <tr>
-              <th>Company</th>
-              <th>Member ID</th>
-              <th>Period</th>
-              <th>Employee contribution</th>
-              <th>Employer contribution</th>
-              <th>Pension / EPS</th>
-              <th>Row balance</th>
-            </tr>
-          </thead>
-          <tbody>${recordRows || `<tr><td colspan="7">No rows detected.</td></tr>`}</tbody>
-        </table>
-      </body>
-    </html>`;
+  return `<?xml version="1.0"?>
+<?mso-application progid="Excel.Sheet"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:o="urn:schemas-microsoft-com:office:office"
+ xmlns:x="urn:schemas-microsoft-com:office:excel"
+ xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:html="http://www.w3.org/TR/REC-html40">
+ <Styles>
+  <Style ss:ID="header"><Font ss:Bold="1"/><Interior ss:Color="#E8F1FF" ss:Pattern="Solid"/></Style>
+  <Style ss:ID="money"><NumberFormat ss:Format="₹#,##0.00"/></Style>
+ </Styles>
+ ${worksheets.join("\n")}
+</Workbook>`;
 }
 
 function formatOptionalCurrency(value) {
   return value === null || value === undefined ? "-" : formatCurrency(value);
+}
+
+function numberForDisplay(value) {
+  return value === null || value === undefined ? "-" : String(value);
 }
 
 function formatComponentLabel(label) {
@@ -438,6 +593,35 @@ function formatSource(value) {
     "local-llm": "Local LLM extraction",
     "last-row-balance": "Last passbook row balance"
   }[value] || value;
+}
+
+function formatNpsSource(value) {
+  return {
+    "labelled-total": "Clear NPS total label",
+    "holding-sum": "Sum of detected NPS holdings",
+    "not-found": "Not found"
+  }[value] || value;
+}
+
+function worksheetXml(name, rows) {
+  return `<Worksheet ss:Name="${xmlEscape(name)}">
+  <Table>
+   ${rows.map((row, index) => rowXml(row, index === 0)).join("\n")}
+  </Table>
+ </Worksheet>`;
+}
+
+function rowXml(row, isHeader = false) {
+  return `<Row>${row.map((cell) => cellXml(cell, isHeader)).join("")}</Row>`;
+}
+
+function cellXml(value, isHeader) {
+  const isNumber = typeof value === "number" && Number.isFinite(value);
+  const style = isHeader ? " ss:StyleID=\"header\"" : "";
+  const type = isNumber ? "Number" : "String";
+  const content = isNumber ? String(value) : xmlEscape(value ?? "");
+
+  return `<Cell${style}><Data ss:Type="${type}">${content}</Data></Cell>`;
 }
 
 function setStatus(message) {
@@ -468,6 +652,15 @@ function maskMemberId(memberId) {
 
 function numberForSheet(value) {
   return value === null || value === undefined ? "" : String(value);
+}
+
+function xmlEscape(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
 }
 
 function escapeHtml(value) {

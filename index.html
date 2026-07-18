@@ -14,8 +14,8 @@
           <p class="eyebrow">Local EPFO passbook reader</p>
           <h1>Get your EPFO passbook balance into a simple dashboard</h1>
           <p class="hero-copy">
-            Open the official EPFO passbook portal, log in yourself, then paste or import the passbook content here.
-            The app calculates the detected balance, company-wise contribution totals, and Excel export in your browser.
+            Open the official EPFO and NPS portals, log in yourself, then paste or import the content here.
+            The app calculates PF/NPS totals, company-wise PF contributions, and Excel export in your browser.
           </p>
         </div>
         <div class="hero-card">
@@ -58,7 +58,7 @@
 
         <article class="panel">
           <span class="step">3</span>
-          <h2>Import passbook content manually</h2>
+          <h2>Import PF passbook content</h2>
           <label class="file-picker">
             <span>Upload HTML, TXT, or CSV</span>
             <input id="passbook-file" type="file" accept=".html,.htm,.txt,.csv,text/html,text/plain,text/csv">
@@ -82,9 +82,34 @@
           </p>
           <p id="status-message" class="status">Waiting for EPFO passbook content.</p>
         </article>
+
+        <article class="panel">
+          <span class="step">4</span>
+          <h2>Import NPS holdings/statement</h2>
+          <p>
+            Open the official NPS CRA portal, log in yourself, then copy or export your holdings/statement text here.
+          </p>
+          <button id="open-nps-portal" class="primary" type="button">Open NPS CRA portal</button>
+          <label class="file-picker">
+            <span>Upload NPS HTML, TXT, or CSV</span>
+            <input id="nps-file" type="file" accept=".html,.htm,.txt,.csv,text/html,text/plain,text/csv">
+          </label>
+          <label class="textarea-label" for="nps-input">Or paste copied NPS holding/statement text</label>
+          <textarea id="nps-input" placeholder="Paste NPS holdings, account statement, or valuation details here..."></textarea>
+          <div class="actions">
+            <button id="parse-nps" class="primary" type="button">Get NPS value</button>
+            <button id="load-nps-sample" type="button">Load NPS sample</button>
+            <button id="clear-nps" type="button">Clear NPS</button>
+          </div>
+          <p id="nps-status-message" class="status">Waiting for NPS content.</p>
+        </article>
       </section>
 
       <section id="dashboard" class="dashboard" hidden>
+        <div class="summary-card total">
+          <span>Combined PF + NPS value</span>
+          <strong id="portfolio-total">-</strong>
+        </div>
         <div class="summary-card total">
           <span>Total EPFO balance</span>
           <strong id="total-balance">-</strong>
@@ -101,6 +126,14 @@
           <span>Pension / EPS</span>
           <strong id="pension-total">-</strong>
         </div>
+        <div class="summary-card nps-total">
+          <span>Total NPS value</span>
+          <strong id="nps-total-value">-</strong>
+        </div>
+        <div class="summary-card">
+          <span>NPS contribution</span>
+          <strong id="nps-contribution-total">-</strong>
+        </div>
         <div class="summary-card">
           <span>Parser confidence</span>
           <strong id="confidence">-</strong>
@@ -108,6 +141,14 @@
         <div class="summary-card">
           <span>Detection source</span>
           <strong id="source">-</strong>
+        </div>
+        <div class="summary-card">
+          <span>NPS confidence</span>
+          <strong id="nps-confidence">-</strong>
+        </div>
+        <div class="summary-card">
+          <span>NPS source</span>
+          <strong id="nps-source">-</strong>
         </div>
 
         <article class="panel components">
@@ -138,6 +179,30 @@
         <article class="panel">
           <h2>Parser notes</h2>
           <ul id="warning-list" class="warning-list"></ul>
+        </article>
+
+        <article class="panel">
+          <h2>NPS parser notes</h2>
+          <ul id="nps-warning-list" class="warning-list"></ul>
+        </article>
+
+        <article class="panel records wide">
+          <h2>NPS holdings</h2>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Tier</th>
+                  <th>Scheme</th>
+                  <th>Units</th>
+                  <th>NAV</th>
+                  <th>Value</th>
+                  <th>Raw row</th>
+                </tr>
+              </thead>
+              <tbody id="nps-holding-list"></tbody>
+            </table>
+          </div>
         </article>
 
         <article class="panel records">
