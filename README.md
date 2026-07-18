@@ -53,11 +53,14 @@ Use this flow:
 7. Open the official EPFO passbook portal from the dashboard.
 8. Log in manually and solve CAPTCHA/OTP yourself.
 9. Open the passbook page you want to import.
-10. Click the **EPFO Local Importer** extension icon.
-11. Click **Import visible passbook**.
+10. The extension shows a small **Passbook detected** prompt on the EPFO page.
+11. Click **Import to dashboard** in that prompt.
 
 The extension sends the visible EPFO page text to `http://localhost:5173/api/import`.
 The dashboard polls that local endpoint and parses the imported content automatically.
+
+Chrome/Edge do not allow extensions to open their toolbar popup automatically, so the extension uses an in-page prompt instead.
+You can still click the extension icon manually if the prompt does not appear.
 
 ## Run locally
 
@@ -83,7 +86,7 @@ A normal web app cannot silently read data from another logged-in website becaus
 EPFO authentication also includes user-facing security controls such as CAPTCHA/OTP.
 
 This app therefore uses a safer assisted flow: it opens the official EPFO portal, lets you authenticate there, and then parses passbook content you explicitly import.
-The browser extension reduces the manual import step, but it still requires you to log in and click import intentionally.
+The browser extension reduces the manual import step, but it still requires you to log in and confirm import intentionally.
 
 ## What the dashboard detects
 
