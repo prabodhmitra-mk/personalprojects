@@ -121,12 +121,13 @@ function decodeEntity(entity) {
 }
 
 function findLabelledBalance(lines) {
-  for (const line of lines) {
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
     if (!TOTAL_LABELS.some((pattern) => pattern.test(line))) {
       continue;
     }
 
-    const amounts = extractAmounts(line);
+    const amounts = extractAmounts(`${line} ${lines[index + 1] || ""}`);
     if (amounts.length > 0) {
       return {
         value: amounts.at(-1),
@@ -164,6 +165,10 @@ function findComponentAmount(key, labels, text, lines) {
       return currentLineAmounts.at(-1);
     }
 
+    if (countComponentLabels(lines[index]) > 1) {
+      continue;
+    }
+
     const nextLineAmounts = extractAmounts(lines[index + 1] || "");
     if (nextLineAmounts.length > 0) {
       return nextLineAmounts[0];
@@ -171,6 +176,10 @@ function findComponentAmount(key, labels, text, lines) {
   }
 
   return null;
+}
+
+function countComponentLabels(line) {
+  return Object.values(COMPONENT_LABELS).filter((labels) => labels.some((pattern) => pattern.test(line))).length;
 }
 
 function findAmountNearLabel(text, labels) {
@@ -181,13 +190,31 @@ function findAmountNearLabel(text, labels) {
     }
 
     const afterLabel = text.slice(match.index + match[0].length, match.index + match[0].length + 80);
-    const amounts = extractAmounts(afterLabel);
-    if (amounts.length > 0) {
-      return amounts[0];
+    const amountMatches = getAmountMatches(afterLabel);
+    if (amountMatches.length === 0) {
+      continue;
     }
+
+    const firstOtherComponentLabel = findFirstComponentLabelIndex(afterLabel);
+    if (firstOtherComponentLabel !== -1 && firstOtherComponentLabel < amountMatches[0].index) {
+      continue;
+    }
+
+    return parseAmount(amountMatches[0][0]);
   }
 
   return null;
+}
+
+function findFirstComponentLabelIndex(value) {
+  return Object.values(COMPONENT_LABELS)
+    .flat()
+    .map((pattern) => {
+      const match = pattern.exec(value);
+      return match?.index ?? -1;
+    })
+    .filter((index) => index >= 0)
+    .sort((left, right) => left - right)[0] ?? -1;
 }
 
 function findLastTableBalance(lines) {
@@ -238,10 +265,40 @@ function findContributionRecords(lines) {
 }
 
 function extractAmounts(value) {
-  const amountPattern = /(?:rs\.?|inr|₹)?\s*[-+]?\d{1,3}(?:,\d{2,3})*(?:\.\d{1,2})?|(?:rs\.?|inr|₹)\s*[-+]?\d+(?:\.\d{1,2})?/gi;
-  const matches = value.match(amountPattern) || [];
-
-  return matches
-    .map((match) => Number.parseFloat(match.replace(/(?:rs\.?|inr|₹)/gi, "").replace(/,/g, "").trim()))
+  return getAmountMatches(value)
+    .map((match) => parseAmount(match[0]))
     .filter((amount) => Number.isFinite(amount));
+}
+
+function getAmountMatches(value) {
+  const amountPattern = /(?<![A-Za-z0-9])(?:rs\.?|inr|₹)?\s*[-+]?\d[\d,]*(?:\.\d{1,2})?/gi;
+  return [...value.matchAll(amountPattern)].filter((match) => !isDatePart(value, match));
+}
+
+function parseAmount(value) {
+  return Number.parseFloat(value.replace(/(?:rs\.?|inr|₹)/gi, "").replace(/,/g, "").trim());
+}
+
+function isDatePart(value, match) {
+  const token = match[0].trim();
+  const hasCurrencyPrefix = /^(?:rs\.?|inr|₹)/i.test(token);
+  if (hasCurrencyPrefix) {
+    return false;
+  }
+
+  const start = match.index || 0;
+  const end = start + match[0].length;
+  const previousCharacter = value[start - 1] || "";
+  const nextCharacter = value[end] || "";
+  const numericValue = Number.parseInt(token.replace(/[^\d]/g, ""), 10);
+
+  if ((previousCharacter === "-" || previousCharacter === "/") && numericValue >= 1900 && numericValue <= 2099) {
+    return true;
+  }
+
+  if (nextCharacter === "/" || nextCharacter === "-") {
+    return true;
+  }
+
+  return false;
 }
