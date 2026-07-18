@@ -1,6 +1,6 @@
 # EPFO Balance Dashboard
 
-A small privacy-first web app that helps you get a total balance from your EPFO passbook.
+A small privacy-first web app that helps you get total values from your EPFO passbook and NPS holdings/statement.
 
 ## How it works
 
@@ -11,12 +11,13 @@ A small privacy-first web app that helps you get a total balance from your EPFO 
    - use the browser extension to import the visible EPFO page automatically, or
    - copy the passbook table/page text or save an HTML/TXT/CSV export manually.
 5. Click **Get total balance** if you imported manually. Extension imports are parsed automatically.
-6. Optionally click **Ask local LLM** if the rule-based parser cannot understand a changed EPFO format.
-7. Review company-wise employee/employer/pension totals.
-8. Click **Download local XLS** to save an Excel-compatible file on your machine.
+6. Open the official NPS CRA portal, log in yourself, and import copied/downloaded NPS holdings or statement content.
+7. Optionally click **Ask local LLM** if the rule-based PF parser cannot understand a changed EPFO format.
+8. Review PF, NPS, and combined portfolio totals.
+9. Click **Download local XLS** to save an Excel-compatible workbook on your machine.
 
 The app does not store your EPFO password and does not try to bypass EPFO login security.
-Imported passbook content is processed in the browser tab.
+Imported PF/NPS content is processed locally in the browser tab.
 
 ## Avoid manual download/upload with the browser extension
 
@@ -62,6 +63,23 @@ The dashboard polls that local endpoint and parses the imported content automati
 
 Chrome/Edge do not allow extensions to open their toolbar popup automatically, so the extension uses an in-page prompt instead.
 You can still click the extension icon manually if the prompt does not appear.
+
+## Import NPS data
+
+Use the NPS section in the dashboard:
+
+1. Click **Open NPS CRA portal**.
+2. Log in manually on the official NPS site.
+3. Copy or export your holdings/statement content.
+4. Paste or upload it in the NPS import section.
+5. Click **Get NPS value**.
+
+The NPS parser detects:
+
+- Total NPS corpus/current value.
+- Total contribution, when available.
+- PRAN, when available.
+- Holding rows with tier, scheme, units, NAV, and current value.
 
 ## Optional local LLM fallback
 
@@ -117,12 +135,24 @@ The browser extension reduces the manual import step, but it still requires you 
 
 ## What the dashboard detects
 
-- Total EPFO balance.
-- Employee contribution total.
-- Employer contribution total.
-- Pension/EPS contribution total.
-- Company-wise totals across detected member IDs.
-- Recent passbook rows.
+- Combined PF + NPS value.
+- Total EPFO/PF balance.
+- PF employee contribution total.
+- PF employer contribution total.
+- PF pension/EPS contribution total.
+- PF company-wise totals across detected member IDs.
+- Recent PF passbook rows.
+- Total NPS value.
+- NPS contribution total, when available.
+- NPS holdings.
 - Optional local LLM extraction result when enabled.
 
-The generated `.xls` file is created locally in the browser from the parsed passbook data.
+The generated `.xls` workbook is created locally in the browser from the parsed PF/NPS data.
+It contains separate sheets for:
+
+- `Summary`
+- `PF Summary`
+- `PF Company Wise`
+- `PF Rows`
+- `NPS Summary`
+- `NPS Holdings`
