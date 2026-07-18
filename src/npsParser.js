@@ -88,6 +88,10 @@ function findLabelledTotal(lines) {
     }
 
     const sameLineAmounts = extractAmounts(line);
+    if (sameLineAmounts.length === 0 && /\b(?:scheme|units?|nav)\b/i.test(line)) {
+      continue;
+    }
+
     const nextLineAmounts = extractAmounts(lines[index + 1] || "");
     const amounts = sameLineAmounts.length > 0 ? sameLineAmounts : nextLineAmounts;
 
