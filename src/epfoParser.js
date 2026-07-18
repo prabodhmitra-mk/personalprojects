@@ -7,6 +7,9 @@ const RUPEE_FORMATTER = new Intl.NumberFormat("en-IN", {
 const MONTH_PATTERN =
   /\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*[-\s']*\d{2,4}\b|\b\d{1,2}[-/]\d{4}\b/i;
 
+const WAGE_MONTH_ROW_PATTERN =
+  /^\s*(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*[-\s']*\d{2,4}\b|^\s*\d{1,2}[-/]\d{4}\b/i;
+
 const DEFAULT_COMPANY_NAME = "Unknown company";
 
 const TOTAL_LABELS = [
@@ -152,6 +155,22 @@ function findLabelledBalance(lines) {
 
     const amounts = extractAmounts(`${line} ${lines[index + 1] || ""}`);
     if (amounts.length > 0) {
+      if (/current\s+balance/i.test(line) && amounts.length > 1) {
+        return {
+          value: amounts[0],
+          source: "overview-current-balance",
+          confidence: 0.94
+        };
+      }
+
+      if (/closing\s+balance/i.test(line) && amounts.length >= 2) {
+        return {
+          value: roundMoney(amounts[0] + amounts[1]),
+          source: "closing-balance-shares",
+          confidence: 0.86
+        };
+      }
+
       return {
         value: amounts.at(-1),
         source: "labelled-total",
@@ -243,7 +262,7 @@ function findFirstComponentLabelIndex(value) {
 function findLastTableBalance(lines) {
   for (let index = lines.length - 1; index >= 0; index -= 1) {
     const line = lines[index];
-    if (!MONTH_PATTERN.test(line)) {
+    if (!WAGE_MONTH_ROW_PATTERN.test(line)) {
       continue;
     }
 
@@ -288,6 +307,7 @@ function findContributionRecords(lines) {
   const records = [];
   let currentCompany = DEFAULT_COMPANY_NAME;
   let currentMemberId = null;
+  let currentTableHasBalanceColumn = false;
 
   for (const line of lines) {
     const companyName = extractCompanyName(line);
@@ -300,7 +320,11 @@ function findContributionRecords(lines) {
       currentMemberId = memberId;
     }
 
-    if (!MONTH_PATTERN.test(line)) {
+    if (/wage\s+month/i.test(line)) {
+      currentTableHasBalanceColumn = /\bbalance\b/i.test(line);
+    }
+
+    if (!WAGE_MONTH_ROW_PATTERN.test(line)) {
       continue;
     }
 
@@ -309,11 +333,11 @@ function findContributionRecords(lines) {
       continue;
     }
 
-    const shares = mapContributionAmounts(amounts);
+    const shares = mapContributionAmounts(amounts, currentTableHasBalanceColumn);
     records.push({
       company: currentCompany,
       memberId: currentMemberId,
-      period: line.match(MONTH_PATTERN)?.[0] || "Unknown",
+      period: line.match(WAGE_MONTH_ROW_PATTERN)?.[0]?.trim() || "Unknown",
       employeeShare: shares.employeeShare,
       employerShare: shares.employerShare,
       pensionShare: shares.pensionShare,
@@ -444,8 +468,8 @@ function extractMemberId(line) {
   return memberId?.[0]?.toUpperCase() || null;
 }
 
-function mapContributionAmounts(amounts) {
-  if (amounts.length >= 6) {
+function mapContributionAmounts(amounts, hasBalanceColumn) {
+  if (hasBalanceColumn && amounts.length >= 6) {
     return {
       employeeShare: amounts.at(-4) ?? null,
       employerShare: amounts.at(-3) ?? null,
@@ -454,11 +478,29 @@ function mapContributionAmounts(amounts) {
     };
   }
 
+  if (hasBalanceColumn && amounts.length >= 4) {
+    return {
+      employeeShare: amounts[0] ?? null,
+      employerShare: amounts[1] ?? null,
+      pensionShare: amounts[2] ?? null,
+      rowBalance: amounts.at(-1) ?? null
+    };
+  }
+
+  if (!hasBalanceColumn && amounts.length >= 5) {
+    return {
+      employeeShare: amounts.at(-3) ?? null,
+      employerShare: amounts.at(-2) ?? null,
+      pensionShare: amounts.at(-1) ?? null,
+      rowBalance: null
+    };
+  }
+
   return {
     employeeShare: amounts[0] ?? null,
     employerShare: amounts[1] ?? null,
     pensionShare: amounts[2] ?? null,
-    rowBalance: amounts.at(-1) ?? null
+    rowBalance: hasBalanceColumn ? amounts.at(-1) ?? null : null
   };
 }
 
@@ -493,6 +535,20 @@ function isDatePart(value, match) {
   const previousCharacter = value[start - 1] || "";
   const nextCharacter = value[end] || "";
   const numericValue = Number.parseInt(token.replace(/[^\d]/g, ""), 10);
+  const digits = token.replace(/[^\d]/g, "");
+  const previousText = value.slice(Math.max(0, start - 24), start);
+
+  if (digits.length === 6 && /due[-\s]?month\s*$/i.test(previousText)) {
+    return true;
+  }
+
+  if (digits.length === 6) {
+    const month = Number.parseInt(digits.slice(0, 2), 10);
+    const year = Number.parseInt(digits.slice(2), 10);
+    if (month >= 1 && month <= 12 && year >= 1900 && year <= 2099) {
+      return true;
+    }
+  }
 
   if ((previousCharacter === "-" || previousCharacter === "/") && numericValue >= 1900 && numericValue <= 2099) {
     return true;

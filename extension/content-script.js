@@ -120,19 +120,27 @@ function looksLikePassbookPage(pageText) {
 
 function getVisiblePageText() {
   const widget = document.getElementById(WIDGET_ID);
-  const previousDisplay = widget?.style.display;
+  const parent = widget?.parentNode;
+  const nextSibling = widget?.nextSibling;
 
   if (widget) {
-    widget.style.display = "none";
+    widget.remove();
   }
 
-  const pageText = document.body?.innerText?.trim() || "";
+  const pageText = stripImporterText(document.body?.innerText?.trim() || "");
 
-  if (widget) {
-    widget.style.display = previousDisplay || "";
+  if (widget && parent) {
+    parent.insertBefore(widget, nextSibling);
   }
 
   return pageText;
+}
+
+function stripImporterText(pageText) {
+  return pageText
+    .replace(/EPFO Local Importer\s+Passbook detected\s+Import the visible passbook[\s\S]*?Nothing is sent until you click import\./gi, "")
+    .replace(/Import to dashboard\s+Open dashboard\s+Dismiss/gi, "")
+    .trim();
 }
 
 function injectStyle() {

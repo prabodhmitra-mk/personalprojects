@@ -81,3 +81,31 @@ test("aggregates employee and employer contributions across companies", () => {
     ]
   );
 });
+
+test("parses EPFO overview current balance format", () => {
+  const result = parsePassbookInput(`
+    Select Member Id
+    BGBNG18662230000010514
+    Passbook Overview - BGBNG18662230000010514
+    Current Balance Adjustments (Balance) Employee Contribution Employer Contribution Interest Earned Transfer-Ins/VDR Total PF Withdrawal
+    Rs 13,17,956 Rs 0 Rs 3,05,452 Rs 2,86,702 Rs 71,255 Rs 0 Rs 0
+    Last Contribution made by for the month of Jun-2026
+
+    Passbook for Member Id : [ BGBNG18662230000010514 ]
+    Particulars Employee Share Employer Share Pension Share
+    OB Int. Updated upto 01/04/2026 Rs 6,13,073 Rs 5,71,715 Rs 37,500
+    Wage Month Transaction Date Transaction Type Particulars EPF Wages EPS Wages Employee Share ( 12% ) Employer Share ( 3.67% ) Pension Share ( 8.33% )
+    Mar-2026 01-04-2026 + Cont. for Due-Month 042026 1,65,360 15,000 19,843 18,593 1,250
+    Apr-2026 01-05-2026 + Cont. for Due-Month 052026 2,02,566 15,000 24,308 23,058 1,250
+    May-2026 01-06-2026 + Cont. for Due-Month 062026 2,02,566 15,000 24,308 23,058 1,250
+    Total Contributions for the year [ 2026 ] Rs 68,459 Rs 64,709 Rs 3,750
+    Closing Balance as on 31/03/2027 Rs 6,81,532 Rs 6,36,424 Rs 41,250
+  `);
+
+  assert.equal(result.totalBalance, 1317956);
+  assert.equal(result.balanceSource, "overview-current-balance");
+  assert.equal(result.records.length, 3);
+  assert.equal(result.totals.employee, 68459);
+  assert.equal(result.totals.employer, 64709);
+  assert.equal(result.totals.pension, 3750);
+});

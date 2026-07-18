@@ -81,7 +81,7 @@ downloadXlsButton.addEventListener("click", () => {
 function parseAndRender() {
   const result = parsePassbookInput(passbookInput.value);
 
-  if (!result.totalBalance) {
+  if (result.totalBalance === null) {
     lastParseResult = null;
     dashboard.hidden = true;
     downloadXlsButton.disabled = true;
@@ -329,6 +329,8 @@ function formatComponentLabel(label) {
 function formatSource(value) {
   return {
     "labelled-total": "Clear total balance label",
+    "overview-current-balance": "EPFO overview current balance",
+    "closing-balance-shares": "Closing employee + employer shares",
     "component-sum": "Sum of detected components",
     "company-balance-sum": "Sum of latest company balances",
     "last-row-balance": "Last passbook row balance"
