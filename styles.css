@@ -46,6 +46,11 @@ button:hover {
   border-color: var(--primary);
 }
 
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
 .primary {
   background: var(--primary);
   border-color: var(--primary);
@@ -255,6 +260,10 @@ textarea:focus {
 .components,
 .records {
   grid-column: span 2;
+}
+
+.wide {
+  grid-column: 1 / -1;
 }
 
 .component-list,

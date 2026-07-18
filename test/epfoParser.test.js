@@ -51,3 +51,33 @@ test("normalizes simple html tables before parsing", () => {
 
   assert.equal(result.totalBalance, 99999);
 });
+
+test("aggregates employee and employer contributions across companies", () => {
+  const result = parsePassbookInput(`
+    Establishment ID & Name: ABC TECHNOLOGIES PRIVATE LIMITED
+    Member ID: PYBOM00012340000001234
+    Wage Month Employee Share Employer Share Pension Share Balance
+    Jan-2026 1,800 550 1,250 1,72,000
+    Feb-2026 1,850 565 1,285 1,76,850
+
+    Establishment ID & Name: XYZ SERVICES LLP
+    Member ID: MHBAN00056780000005678
+    Wage Month EPF Wages EPS Wages EDLI Wages Employee Share Employer Share Pension Share Balance
+    Jan-2026 15,000 15,000 15,000 1,800 550 1,250 90,000
+    Feb-2026 15,500 15,000 15,500 1,860 570 1,290 95,500
+  `);
+
+  assert.equal(result.balanceSource, "company-balance-sum");
+  assert.equal(result.totalBalance, 272350);
+  assert.equal(result.totals.employee, 7310);
+  assert.equal(result.totals.employer, 2235);
+  assert.equal(result.totals.pension, 5075);
+  assert.equal(result.companySummaries.length, 2);
+  assert.deepEqual(
+    result.companySummaries.map((summary) => [summary.company, summary.latestBalance]),
+    [
+      ["ABC TECHNOLOGIES PRIVATE LIMITED", 176850],
+      ["XYZ SERVICES LLP", 95500]
+    ]
+  );
+});

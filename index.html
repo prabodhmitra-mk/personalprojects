@@ -15,7 +15,7 @@
           <h1>Get your EPFO passbook balance into a simple dashboard</h1>
           <p class="hero-copy">
             Open the official EPFO passbook portal, log in yourself, then paste or import the passbook content here.
-            The app calculates the detected total balance in your browser and does not store your EPFO password.
+            The app calculates the detected balance, company-wise contribution totals, and Excel export in your browser.
           </p>
         </div>
         <div class="hero-card">
@@ -35,7 +35,8 @@
           <button id="open-portal" class="primary" type="button">Open EPFO passbook portal</button>
           <p class="hint">
             Browser security prevents this web app from silently reading another logged-in website. After login,
-            copy the passbook table or save an HTML/text export and import it below.
+            copy the passbook table or save an HTML/text export and import it below. An Android WebView version could
+            automate the import after your confirmation.
           </p>
         </article>
 
@@ -50,6 +51,7 @@
           <textarea id="passbook-input" placeholder="Paste EPFO passbook table text, copied page content, or downloaded HTML here..."></textarea>
           <div class="actions">
             <button id="parse-passbook" class="primary" type="button">Get total balance</button>
+            <button id="download-xls" type="button" disabled>Download local XLS</button>
             <button id="load-sample" type="button">Load sample</button>
             <button id="clear-data" type="button">Clear</button>
           </div>
@@ -61,6 +63,18 @@
         <div class="summary-card total">
           <span>Total EPFO balance</span>
           <strong id="total-balance">-</strong>
+        </div>
+        <div class="summary-card">
+          <span>Employee contribution</span>
+          <strong id="employee-total">-</strong>
+        </div>
+        <div class="summary-card">
+          <span>Employer contribution</span>
+          <strong id="employer-total">-</strong>
+        </div>
+        <div class="summary-card">
+          <span>Pension / EPS</span>
+          <strong id="pension-total">-</strong>
         </div>
         <div class="summary-card">
           <span>Parser confidence</span>
@@ -76,6 +90,26 @@
           <ul id="component-list" class="component-list"></ul>
         </article>
 
+        <article class="panel records wide">
+          <h2>Company-wise totals</h2>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Company</th>
+                  <th>Member IDs</th>
+                  <th>Rows</th>
+                  <th>Employee</th>
+                  <th>Employer</th>
+                  <th>Pension</th>
+                  <th>Latest balance</th>
+                </tr>
+              </thead>
+              <tbody id="company-list"></tbody>
+            </table>
+          </div>
+        </article>
+
         <article class="panel">
           <h2>Parser notes</h2>
           <ul id="warning-list" class="warning-list"></ul>
@@ -87,6 +121,7 @@
             <table>
               <thead>
                 <tr>
+                  <th>Company</th>
                   <th>Period</th>
                   <th>Employee</th>
                   <th>Employer</th>

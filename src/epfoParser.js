@@ -7,6 +7,8 @@ const RUPEE_FORMATTER = new Intl.NumberFormat("en-IN", {
 const MONTH_PATTERN =
   /\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*[-\s']*\d{2,4}\b|\b\d{1,2}[-/]\d{4}\b/i;
 
+const DEFAULT_COMPANY_NAME = "Unknown company";
+
 const TOTAL_LABELS = [
   /total\s+(?:epf\s+)?balance/i,
   /closing\s+balance/i,
@@ -31,6 +33,13 @@ const COMPONENT_LABELS = {
   ]
 };
 
+const COMPANY_LABELS = [
+  /(?:establishment|employer|company)(?:\s+(?:id\s*&\s*name|name|details))?\s*[:\-]\s*(.+)$/i,
+  /(?:establishment|employer|company)\s*[:\-]\s*(.+)$/i
+];
+
+const MEMBER_ID_PATTERN = /\b[A-Z]{2}[A-Z0-9]{3}\d{17}\b/i;
+
 const HTML_ENTITY_MAP = {
   amp: "&",
   gt: ">",
@@ -50,13 +59,17 @@ export function parsePassbookInput(rawInput) {
   const labelledBalance = findLabelledBalance(lines);
   const components = findComponents(text, lines);
   const tableBalance = findLastTableBalance(lines);
+  const records = findContributionRecords(lines);
+  const companySummaries = summarizeByCompany(records);
+  const companyBalance = findCompanyBalanceTotal(companySummaries);
   const componentTotal = sumAvailableComponents(components);
 
   const selected = labelledBalance
+    || companyBalance
     || (componentTotal ? { value: componentTotal, source: "component-sum", confidence: 0.75 } : null)
     || tableBalance;
 
-  const records = findContributionRecords(lines);
+  const totals = buildTotals(components, records);
   const warnings = [];
 
   if (!selected) {
@@ -65,6 +78,14 @@ export function parsePassbookInput(rawInput) {
 
   if (!labelledBalance && tableBalance) {
     warnings.push("Balance was inferred from the last passbook row. Please verify it against the EPFO page.");
+  }
+
+  if (!labelledBalance && companyBalance) {
+    warnings.push("Balance was calculated by summing the latest detected company/member balances. Please verify it against EPFO.");
+  }
+
+  if (records.length > 0 && companySummaries.some((summary) => summary.company === DEFAULT_COMPANY_NAME)) {
+    warnings.push("Some rows did not include a detectable employer/company name, so they were grouped as Unknown company.");
   }
 
   if (selected && selected.confidence < 0.8) {
@@ -77,6 +98,8 @@ export function parsePassbookInput(rawInput) {
     balanceSource: selected?.source ?? "not-found",
     confidence: selected?.confidence ?? 0,
     components,
+    totals,
+    companySummaries,
     records,
     warnings,
     lineCount: lines.length
@@ -237,6 +260,21 @@ function findLastTableBalance(lines) {
   return null;
 }
 
+function findCompanyBalanceTotal(companySummaries) {
+  const summariesWithBalance = companySummaries.filter((summary) => summary.latestBalance !== null);
+  const hasNamedCompany = summariesWithBalance.some((summary) => summary.company !== DEFAULT_COMPANY_NAME);
+
+  if (summariesWithBalance.length === 0 || (!hasNamedCompany && summariesWithBalance.length === 1)) {
+    return null;
+  }
+
+  return {
+    value: summariesWithBalance.reduce((total, summary) => total + summary.latestBalance, 0),
+    source: "company-balance-sum",
+    confidence: 0.68
+  };
+}
+
 function sumAvailableComponents(components) {
   const values = Object.values(components).filter((value) => value !== null);
   if (values.length < 2) {
@@ -247,21 +285,185 @@ function sumAvailableComponents(components) {
 }
 
 function findContributionRecords(lines) {
-  return lines
-    .filter((line) => MONTH_PATTERN.test(line))
-    .map((line) => {
-      const amounts = extractAmounts(line);
-      return {
-        period: line.match(MONTH_PATTERN)?.[0] || "Unknown",
-        employeeShare: amounts[0] ?? null,
-        employerShare: amounts[1] ?? null,
-        pensionShare: amounts[2] ?? null,
-        rowBalance: amounts.at(-1) ?? null,
-        raw: line
-      };
-    })
-    .filter((record) => record.rowBalance !== null)
-    .slice(-12);
+  const records = [];
+  let currentCompany = DEFAULT_COMPANY_NAME;
+  let currentMemberId = null;
+
+  for (const line of lines) {
+    const companyName = extractCompanyName(line);
+    if (companyName) {
+      currentCompany = companyName;
+    }
+
+    const memberId = extractMemberId(line);
+    if (memberId) {
+      currentMemberId = memberId;
+    }
+
+    if (!MONTH_PATTERN.test(line)) {
+      continue;
+    }
+
+    const amounts = extractAmounts(line);
+    if (amounts.length < 3) {
+      continue;
+    }
+
+    const shares = mapContributionAmounts(amounts);
+    records.push({
+      company: currentCompany,
+      memberId: currentMemberId,
+      period: line.match(MONTH_PATTERN)?.[0] || "Unknown",
+      employeeShare: shares.employeeShare,
+      employerShare: shares.employerShare,
+      pensionShare: shares.pensionShare,
+      rowBalance: shares.rowBalance,
+      raw: line
+    });
+  }
+
+  return records;
+}
+
+function summarizeByCompany(records) {
+  const summaries = new Map();
+
+  for (const record of records) {
+    const company = record.company || DEFAULT_COMPANY_NAME;
+    const summary = summaries.get(company) || {
+      company,
+      memberIds: new Set(),
+      employeeTotal: 0,
+      employerTotal: 0,
+      pensionTotal: 0,
+      latestBalancesByMember: new Map(),
+      recordCount: 0
+    };
+
+    const memberKey = record.memberId || company;
+
+    if (record.memberId) {
+      summary.memberIds.add(record.memberId);
+    }
+
+    summary.employeeTotal += record.employeeShare || 0;
+    summary.employerTotal += record.employerShare || 0;
+    summary.pensionTotal += record.pensionShare || 0;
+    summary.recordCount += 1;
+
+    if (record.rowBalance !== null) {
+      summary.latestBalancesByMember.set(memberKey, record.rowBalance);
+    }
+
+    summaries.set(company, summary);
+  }
+
+  return [...summaries.values()].map((summary) => {
+    const balances = [...summary.latestBalancesByMember.values()];
+
+    return {
+      company: summary.company,
+      memberIds: [...summary.memberIds],
+      employeeTotal: roundMoney(summary.employeeTotal),
+      employerTotal: roundMoney(summary.employerTotal),
+      pensionTotal: roundMoney(summary.pensionTotal),
+      contributionTotal: roundMoney(summary.employeeTotal + summary.employerTotal + summary.pensionTotal),
+      latestBalance: balances.length > 0 ? roundMoney(balances.reduce((total, value) => total + value, 0)) : null,
+      recordCount: summary.recordCount
+    };
+  });
+}
+
+function buildTotals(components, records) {
+  const recordTotals = records.reduce(
+    (totals, record) => ({
+      employee: totals.employee + (record.employeeShare || 0),
+      employer: totals.employer + (record.employerShare || 0),
+      pension: totals.pension + (record.pensionShare || 0)
+    }),
+    { employee: 0, employer: 0, pension: 0 }
+  );
+
+  const hasRecordTotals = records.length > 0;
+  const employee = hasRecordTotals ? recordTotals.employee : components.employee;
+  const employer = hasRecordTotals ? recordTotals.employer : components.employer;
+  const pension = hasRecordTotals ? recordTotals.pension : components.pension;
+
+  return {
+    employee: employee === null ? null : roundMoney(employee),
+    employer: employer === null ? null : roundMoney(employer),
+    pension: pension === null ? null : roundMoney(pension),
+    contributionTotal: [employee, employer, pension].some((value) => value !== null)
+      ? roundMoney([employee, employer, pension].reduce((total, value) => total + (value || 0), 0))
+      : null
+  };
+}
+
+function extractCompanyName(line) {
+  if (MONTH_PATTERN.test(line) || countComponentLabels(line) > 1) {
+    return null;
+  }
+
+  for (const label of COMPANY_LABELS) {
+    const match = label.exec(line);
+    if (!match?.[1]) {
+      continue;
+    }
+
+    const companyName = sanitizeCompanyName(match[1]);
+    if (companyName) {
+      return companyName;
+    }
+  }
+
+  return null;
+}
+
+function sanitizeCompanyName(value) {
+  const companyName = value
+    .replace(MEMBER_ID_PATTERN, "")
+    .replace(/^[A-Z0-9]{5,}\s*[-:]?\s*/i, "")
+    .replace(/\bmember\s+id\b.*$/i, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (!companyName || /\b(?:wage\s+month|employee\s+share|employer\s+share|balance)\b/i.test(companyName)) {
+    return null;
+  }
+
+  return companyName;
+}
+
+function extractMemberId(line) {
+  const labelledMemberId = /member\s+id\s*[:\-]\s*([A-Z0-9]+)/i.exec(line);
+  if (labelledMemberId?.[1]) {
+    return labelledMemberId[1].toUpperCase();
+  }
+
+  const memberId = MEMBER_ID_PATTERN.exec(line);
+  return memberId?.[0]?.toUpperCase() || null;
+}
+
+function mapContributionAmounts(amounts) {
+  if (amounts.length >= 6) {
+    return {
+      employeeShare: amounts.at(-4) ?? null,
+      employerShare: amounts.at(-3) ?? null,
+      pensionShare: amounts.at(-2) ?? null,
+      rowBalance: amounts.at(-1) ?? null
+    };
+  }
+
+  return {
+    employeeShare: amounts[0] ?? null,
+    employerShare: amounts[1] ?? null,
+    pensionShare: amounts[2] ?? null,
+    rowBalance: amounts.at(-1) ?? null
+  };
+}
+
+function roundMoney(value) {
+  return Math.round((value + Number.EPSILON) * 100) / 100;
 }
 
 function extractAmounts(value) {
