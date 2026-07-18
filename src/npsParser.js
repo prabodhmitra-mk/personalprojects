@@ -110,7 +110,9 @@ function findLabelledAmount(lines, labels) {
       continue;
     }
 
-    const amounts = extractAmounts(`${line} ${lines[index + 1] || ""}`);
+    const sameLineAmounts = extractAmounts(line);
+    const nextLineAmounts = extractAmounts(lines[index + 1] || "");
+    const amounts = sameLineAmounts.length > 0 ? sameLineAmounts : nextLineAmounts;
     if (amounts.length > 0) {
       return amounts.at(-1);
     }
@@ -128,12 +130,12 @@ function findHoldings(lines) {
 function parseHoldingLine(line) {
   const hasSchemeSignal = /\b(?:scheme|asset\s+class|equity|corporate|government|alternate|e\s*-?\s*tier|c\s*-?\s*tier|g\s*-?\s*tier|a\s*-?\s*tier)\b/i.test(line);
   const hasUnitsOrNav = /\b(?:units?|nav|value|amount|corpus)\b/i.test(line);
+  const amounts = extractAmounts(line);
 
-  if (!hasSchemeSignal || !hasUnitsOrNav || TOTAL_LABELS.some((pattern) => pattern.test(line))) {
+  if (!hasSchemeSignal || (amounts.length < 3 && !hasUnitsOrNav) || TOTAL_LABELS.some((pattern) => pattern.test(line))) {
     return null;
   }
 
-  const amounts = extractAmounts(line);
   if (amounts.length < 2) {
     return null;
   }
