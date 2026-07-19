@@ -175,6 +175,14 @@ Notes:
 
 ## Run locally
 
+Install dependencies first, especially after pulling new changes:
+
+```bash
+npm install
+```
+
+Then start the app:
+
 ```bash
 npm start
 ```
@@ -190,6 +198,30 @@ http://localhost:5173
 ```bash
 npm test
 ```
+
+## Troubleshooting
+
+### Cannot find package `imapflow`
+
+If `npm start` shows:
+
+```text
+Error [ERR_MODULE_NOT_FOUND]: Cannot find package 'imapflow'
+```
+
+run:
+
+```bash
+npm install
+```
+
+Then start again:
+
+```bash
+npm start
+```
+
+The NPS email importer uses `imapflow`, `mailparser`, and `pdfjs-dist`. They are installed from `package.json`/`package-lock.json`.
 
 ## Why the app does not directly scrape EPFO
 

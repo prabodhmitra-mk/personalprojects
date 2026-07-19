@@ -5,7 +5,6 @@ import { extname, join, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { DEFAULT_OLLAMA_MODEL, extractWithOllama } from "./src/llmExtractor.js";
-import { importNpsStatementsFromEmail } from "./src/npsEmailImporter.js";
 
 const root = fileURLToPath(new URL(".", import.meta.url));
 const port = Number(process.env.PORT || 5173);
@@ -160,6 +159,7 @@ async function handleApiRequest(request, response, url) {
   if (url.pathname === "/api/nps-email-import" && request.method === "POST") {
     try {
       const payload = await readJsonBody(request);
+      const { importNpsStatementsFromEmail } = await loadNpsEmailImporter();
       const result = await importNpsStatementsFromEmail(payload);
 
       sendJson(response, 200, result);
@@ -199,6 +199,18 @@ function formatEmailImportError(error) {
   }
 
   return error.message;
+}
+
+async function loadNpsEmailImporter() {
+  try {
+    return await import("./src/npsEmailImporter.js");
+  } catch (error) {
+    if (error.code === "ERR_MODULE_NOT_FOUND" || /Cannot find package/i.test(error.message || "")) {
+      throw new Error("NPS email import dependencies are not installed. Run `npm install` in this project folder, then restart with `npm start`.");
+    }
+
+    throw error;
+  }
 }
 
 const server = createServer((request, response) => {
