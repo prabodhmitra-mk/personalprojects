@@ -14,77 +14,19 @@
           <p class="eyebrow">Local EPFO passbook reader</p>
           <h1>Get your EPFO passbook balance into a simple dashboard</h1>
           <p class="hero-copy">
-            Open the official EPFO and NPS portals, log in yourself, then paste or import the content here.
-            The app calculates PF/NPS totals, company-wise PF contributions, and Excel export in your browser.
+            Save a manual PF projection baseline, import NPS statements, and export a combined PF/NPS workbook from your browser.
           </p>
         </div>
         <div class="hero-card">
           <span class="badge">Privacy-first</span>
           <strong>No credential storage</strong>
-          <p>EPFO authentication stays on the official website. Imported text remains in this browser tab.</p>
+          <p>Projection data stays in browser local storage. Email credentials are used only for a local NPS import request.</p>
         </div>
       </section>
 
       <section class="grid">
         <article class="panel">
           <span class="step">1</span>
-          <h2>Connect to EPFO</h2>
-          <p>
-            Launch the official EPFO passbook portal in a new tab. Complete UAN/password, CAPTCHA, and OTP there.
-          </p>
-          <button id="open-portal" class="primary" type="button">Open EPFO passbook portal</button>
-          <p class="hint">
-            Browser security prevents this web app from silently reading another logged-in website. After login,
-            copy the passbook table or save an HTML/text export and import it below. An Android WebView version could
-            automate the import after your confirmation.
-          </p>
-        </article>
-
-        <article class="panel">
-          <span class="step">2</span>
-          <h2>Optional: avoid copy/download with extension</h2>
-          <p>
-            Install the local Chrome/Edge extension from the <code>extension/</code> folder. After manual EPFO login
-            and passbook page load, it shows a small <strong>Passbook detected</strong> prompt on the EPFO page.
-          </p>
-          <ol class="compact-list">
-            <li>Start this app with <code>npm start</code>.</li>
-            <li>Open Chrome/Edge extensions and enable Developer mode.</li>
-            <li>Load unpacked extension from this repository's <code>extension/</code> folder.</li>
-            <li>Click <strong>Import to dashboard</strong> in the EPFO page prompt.</li>
-          </ol>
-          <p id="local-import-status" class="status">Waiting for browser extension import from an EPFO tab.</p>
-        </article>
-
-        <article class="panel">
-          <span class="step">3</span>
-          <h2>Import PF passbook content</h2>
-          <label class="file-picker">
-            <span>Upload HTML, TXT, or CSV</span>
-            <input id="passbook-file" type="file" accept=".html,.htm,.txt,.csv,text/html,text/plain,text/csv">
-          </label>
-          <label class="textarea-label" for="passbook-input">Or paste copied passbook text/table</label>
-          <textarea id="passbook-input" placeholder="Paste EPFO passbook table text, copied page content, or downloaded HTML here..."></textarea>
-          <div class="actions">
-            <button id="parse-passbook" class="primary" type="button">Get total balance</button>
-            <label class="llm-model-field">
-              <span>Local LLM model</span>
-              <input id="llm-model" type="text" value="llama3.2:1b" spellcheck="false">
-            </label>
-            <button id="llm-extract" type="button">Ask local LLM</button>
-            <button id="download-xls" type="button" disabled>Download local XLS</button>
-            <button id="load-sample" type="button">Load sample</button>
-            <button id="clear-data" type="button">Clear</button>
-          </div>
-          <p class="hint">
-            Optional LLM fallback: install Ollama locally, run <code>ollama pull llama3.2:1b</code>,
-            then use this button if EPFO changes the page format.
-          </p>
-          <p id="status-message" class="status">Waiting for EPFO passbook content.</p>
-        </article>
-
-        <article class="panel">
-          <span class="step">4</span>
           <h2>Manual PF projection baseline</h2>
           <p>
             Enter your current EPFO balance and last month employee/employer contributions. The app saves this locally
@@ -106,6 +48,7 @@
           </div>
           <div class="actions">
             <button id="save-pf-projection" class="primary" type="button">Save PF projection baseline</button>
+            <button id="download-xls" type="button" disabled>Download local XLS</button>
             <button id="validate-pf-projection" type="button">Optional: validate in EPFO</button>
             <button id="clear-pf-projection" type="button">Clear projection baseline</button>
           </div>
@@ -113,7 +56,7 @@
         </article>
 
         <article class="panel">
-          <span class="step">5</span>
+          <span class="step">2</span>
           <h2>Import NPS statement from email</h2>
           <p>
             The local server can read recent emails where the subject contains <strong>nps</strong> and
@@ -163,7 +106,7 @@
         </article>
 
         <article class="panel">
-          <span class="step">6</span>
+          <span class="step">3</span>
           <h2>Import NPS holdings/statement manually</h2>
           <p>
             You can still open the official NPS CRA portal, log in yourself, then copy or export your holdings/statement text here.
@@ -189,10 +132,6 @@
           <span>Combined PF + NPS value</span>
           <strong id="portfolio-total">-</strong>
         </div>
-        <div class="summary-card total">
-          <span>Total EPFO balance</span>
-          <strong id="total-balance">-</strong>
-        </div>
         <div class="summary-card projection-total">
           <span>Projected PF balance</span>
           <strong id="pf-projected-balance">-</strong>
@@ -205,18 +144,6 @@
           <span>Projection months</span>
           <strong id="pf-projection-months">-</strong>
         </div>
-        <div class="summary-card">
-          <span>Employee contribution</span>
-          <strong id="employee-total">-</strong>
-        </div>
-        <div class="summary-card">
-          <span>Employer contribution</span>
-          <strong id="employer-total">-</strong>
-        </div>
-        <div class="summary-card">
-          <span>Pension / EPS</span>
-          <strong id="pension-total">-</strong>
-        </div>
         <div class="summary-card nps-total">
           <span>Total NPS value</span>
           <strong id="nps-total-value">-</strong>
@@ -226,14 +153,6 @@
           <strong id="nps-contribution-total">-</strong>
         </div>
         <div class="summary-card">
-          <span>Parser confidence</span>
-          <strong id="confidence">-</strong>
-        </div>
-        <div class="summary-card">
-          <span>Detection source</span>
-          <strong id="source">-</strong>
-        </div>
-        <div class="summary-card">
           <span>NPS confidence</span>
           <strong id="nps-confidence">-</strong>
         </div>
@@ -241,36 +160,6 @@
           <span>NPS source</span>
           <strong id="nps-source">-</strong>
         </div>
-
-        <article class="panel components">
-          <h2>Detected components</h2>
-          <ul id="component-list" class="component-list"></ul>
-        </article>
-
-        <article class="panel records wide">
-          <h2>Company-wise totals</h2>
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Company</th>
-                  <th>Member IDs</th>
-                  <th>Rows</th>
-                  <th>Employee</th>
-                  <th>Employer</th>
-                  <th>Pension</th>
-                  <th>Latest balance</th>
-                </tr>
-              </thead>
-              <tbody id="company-list"></tbody>
-            </table>
-          </div>
-        </article>
-
-        <article class="panel">
-          <h2>Parser notes</h2>
-          <ul id="warning-list" class="warning-list"></ul>
-        </article>
 
         <article class="panel">
           <h2>NPS parser notes</h2>
@@ -292,25 +181,6 @@
                 </tr>
               </thead>
               <tbody id="nps-holding-list"></tbody>
-            </table>
-          </div>
-        </article>
-
-        <article class="panel records">
-          <h2>Recent detected rows</h2>
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Company</th>
-                  <th>Period</th>
-                  <th>Employee</th>
-                  <th>Employer</th>
-                  <th>Pension</th>
-                  <th>Row balance</th>
-                </tr>
-              </thead>
-              <tbody id="record-list"></tbody>
             </table>
           </div>
         </article>
