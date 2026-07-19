@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   applyPfMonthlyEstimate,
   buildPfRecord,
+  buildPpfRecord,
   createPfProjectionView
 } from "../src/wealthFile.js";
 
@@ -51,4 +52,19 @@ test("creates PF projection view from stored wealth data", () => {
 
   assert.equal(view.monthlyDeposit, 1900);
   assert.equal(view.projectedBalance, 100000);
+});
+
+test("builds manual PPF record", () => {
+  const ppf = buildPpfRecord({
+    currentBalance: "2,50,000",
+    yearlyContribution: "1,50,000",
+    accountLabel: "SBI PPF",
+    notes: "Checked in passbook",
+    updatedAt: "2026-07-19T00:00:00.000Z"
+  });
+
+  assert.equal(ppf.currentBalance, 250000);
+  assert.equal(ppf.yearlyContribution, 150000);
+  assert.equal(ppf.accountLabel, "SBI PPF");
+  assert.equal(ppf.notes, "Checked in passbook");
 });

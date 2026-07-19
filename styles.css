@@ -141,7 +141,7 @@ h2 {
 .hero-card,
 .panel,
 .summary-card {
-  background: rgba(255, 255, 255, 0.88);
+  background: rgba(255, 255, 255, 0.92);
   border: 1px solid var(--border);
   border-radius: 1.3rem;
   box-shadow: 0 18px 55px rgba(16, 32, 51, 0.09);
@@ -305,12 +305,13 @@ textarea:focus {
 
 .dashboard {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 1.5rem;
   margin-top: 1.5rem;
 }
 
 .summary-card {
+  min-height: 118px;
   padding: 1.4rem;
 }
 
@@ -337,6 +338,11 @@ textarea:focus {
   color: white;
 }
 
+.summary-card.ppf-total {
+  background: linear-gradient(135deg, #147a5c, #66a832);
+  color: white;
+}
+
 .summary-card.projection-total {
   background: linear-gradient(135deg, #9a5b00, #d39118);
   color: white;
@@ -347,6 +353,10 @@ textarea:focus {
 }
 
 .summary-card.nps-total span {
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.summary-card.ppf-total span {
   color: rgba(255, 255, 255, 0.78);
 }
 

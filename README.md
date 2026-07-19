@@ -1,15 +1,16 @@
 # Wealth Management Dashboard
 
-A small privacy-first wealth dashboard that helps you store PF/NPS data in a local file on your laptop and export a combined PF/NPS workbook.
+A small privacy-first wealth dashboard that helps you store PF/PPF/NPS data in a local file on your laptop and export a combined wealth workbook.
 
 ## How it works
 
 1. Start the app locally.
 2. Create or open a local wealth file on your laptop.
 3. Enter a manual PF projection baseline: current PF balance plus last month employee/employer contribution.
-4. Import NPS from email statement attachments.
-5. Review projected PF, NPS, and combined portfolio totals.
-6. Click **Download local XLS** if you want an Excel copy.
+4. Enter PPF details manually.
+5. Import NPS from email statement attachments.
+6. Review projected PF, PPF, NPS, and combined portfolio totals.
+7. Click **Download local XLS** if you want an Excel copy.
 
 The app does not store your EPFO, NPS, or email credentials. Wealth data is saved in the local file you select.
 
@@ -18,7 +19,7 @@ The app does not store your EPFO, NPS, or email credentials. Wealth data is save
 Use the **Local wealth file** section first:
 
 1. Click **Create wealth file** to choose where to save your dashboard data, or **Open existing wealth file**.
-2. The app stores PF and NPS data in that JSON file.
+2. The app stores PF, PPF, and NPS data in that JSON file.
 3. On future opens, the app tries to read the same file automatically if the browser still has permission.
 4. If permission is not available, click **Open existing wealth file** again.
 
@@ -54,6 +55,16 @@ The local wealth file and Excel workbook include:
 - Completed months elapsed.
 - Projected PF balance.
 - Optional validation recommendation.
+
+## Manual PPF details
+
+Use the **Manual PPF details** section:
+
+1. Enter your current PPF balance.
+2. Optionally enter yearly contribution, account label, and notes.
+3. Click **Save PPF**.
+
+The PPF value is stored in the local wealth file and included in the combined wealth total and XLS export.
 
 ## Import NPS data from email
 
@@ -151,10 +162,11 @@ The NPS email importer uses `imapflow`, `mailparser`, and `pdfjs-dist`. They are
 
 ## What the dashboard detects
 
-- Combined PF + NPS value.
+- Combined PF + PPF + NPS value.
 - Projected PF balance from saved manual baseline.
 - PF monthly deposit assumption.
 - PF projection months elapsed.
+- Total PPF value.
 - Total NPS value.
 - NPS contribution total, when available.
 - NPS holdings.
@@ -164,5 +176,6 @@ It contains separate sheets for:
 
 - `Summary`
 - `PF Projection`
+- `PPF`
 - `NPS Summary`
 - `NPS Holdings`

@@ -81,6 +81,38 @@
 
         <article class="panel">
           <span class="step">3</span>
+          <h2>Manual PPF details</h2>
+          <p>
+            Enter your current PPF balance manually. This value is saved in the local wealth file and included in the
+            combined wealth summary and Excel export.
+          </p>
+          <div class="settings-grid">
+            <label>
+              <span>Current PPF balance</span>
+              <input id="ppf-balance" type="number" min="0" step="0.01" placeholder="250000">
+            </label>
+            <label>
+              <span>Yearly contribution, optional</span>
+              <input id="ppf-yearly-contribution" type="number" min="0" step="0.01" placeholder="150000">
+            </label>
+            <label>
+              <span>Account label, optional</span>
+              <input id="ppf-account-label" type="text" placeholder="Bank / account nickname">
+            </label>
+            <label>
+              <span>Notes, optional</span>
+              <input id="ppf-notes" type="text" placeholder="Last checked date, branch, etc.">
+            </label>
+          </div>
+          <div class="actions">
+            <button id="save-ppf" class="primary" type="button">Save PPF</button>
+            <button id="clear-ppf" type="button">Clear PPF</button>
+          </div>
+          <p id="ppf-status" class="status">No PPF data saved yet.</p>
+        </article>
+
+        <article class="panel">
+          <span class="step">4</span>
           <h2>Import NPS statement from email</h2>
           <p>
             The local server can read recent emails where the subject contains <strong>nps</strong> and
@@ -135,7 +167,7 @@
         </article>
 
         <article class="panel">
-          <span class="step">4</span>
+          <span class="step">5</span>
           <h2>NPS data status</h2>
           <p>
             NPS values are imported from email statements only. Use this section to clear the currently saved NPS value
@@ -157,6 +189,10 @@
           <span>Projected PF balance</span>
           <strong id="pf-projected-balance">-</strong>
         </div>
+        <div class="summary-card ppf-total">
+          <span>Total PPF value</span>
+          <strong id="ppf-total-value">-</strong>
+        </div>
         <div class="summary-card">
           <span>Projection monthly deposit</span>
           <strong id="pf-projection-monthly-deposit">-</strong>
@@ -172,6 +208,10 @@
         <div class="summary-card">
           <span>NPS contribution</span>
           <strong id="nps-contribution-total">-</strong>
+        </div>
+        <div class="summary-card">
+          <span>PPF last updated</span>
+          <strong id="ppf-updated-at">-</strong>
         </div>
         <div class="summary-card">
           <span>NPS confidence</span>

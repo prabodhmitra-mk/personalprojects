@@ -10,7 +10,8 @@ export function createEmptyWealthData() {
     version: 1,
     lastUpdatedAt: new Date().toISOString(),
     pf: null,
-    nps: null
+    nps: null,
+    ppf: null
   };
 }
 
@@ -19,7 +20,8 @@ export function normalizeWealthData(value) {
     version: 1,
     lastUpdatedAt: value?.lastUpdatedAt || new Date().toISOString(),
     pf: value?.pf || null,
-    nps: value?.nps || null
+    nps: value?.nps || null,
+    ppf: value?.ppf || null
   };
 }
 
@@ -48,6 +50,23 @@ export function buildNpsRecord(npsResult, updatedAt = new Date().toISOString()) 
     confidence: npsResult.confidence,
     holdings: npsResult.holdings || [],
     lastUpdatedAt: updatedAt
+  };
+}
+
+export function buildPpfRecord({
+  currentBalance,
+  yearlyContribution = null,
+  accountLabel = "",
+  notes = "",
+  updatedAt = new Date().toISOString()
+}) {
+  return {
+    currentBalance: parseMoney(currentBalance),
+    yearlyContribution: yearlyContribution === null || yearlyContribution === "" ? null : parseMoney(yearlyContribution),
+    accountLabel: String(accountLabel || "").trim(),
+    notes: String(notes || "").trim(),
+    lastUpdatedAt: updatedAt,
+    source: "manual"
   };
 }
 

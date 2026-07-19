@@ -4,6 +4,7 @@ import {
   applyPfMonthlyEstimate,
   buildNpsRecord,
   buildPfRecord,
+  buildPpfRecord,
   clearStoredWealthFileHandle,
   createEmptyWealthData,
   createPfProjectionView,
@@ -41,6 +42,13 @@ const savePfProjectionButton = document.querySelector("#save-pf-projection");
 const validatePfProjectionButton = document.querySelector("#validate-pf-projection");
 const clearPfProjectionButton = document.querySelector("#clear-pf-projection");
 const pfProjectionStatus = document.querySelector("#pf-projection-status");
+const ppfBalance = document.querySelector("#ppf-balance");
+const ppfYearlyContribution = document.querySelector("#ppf-yearly-contribution");
+const ppfAccountLabel = document.querySelector("#ppf-account-label");
+const ppfNotes = document.querySelector("#ppf-notes");
+const savePpfButton = document.querySelector("#save-ppf");
+const clearPpfButton = document.querySelector("#clear-ppf");
+const ppfStatus = document.querySelector("#ppf-status");
 const dashboard = document.querySelector("#dashboard");
 const portfolioTotal = document.querySelector("#portfolio-total");
 const pfProjectedBalance = document.querySelector("#pf-projected-balance");
@@ -50,6 +58,8 @@ const npsTotalValue = document.querySelector("#nps-total-value");
 const npsContributionTotal = document.querySelector("#nps-contribution-total");
 const npsConfidence = document.querySelector("#nps-confidence");
 const npsSource = document.querySelector("#nps-source");
+const ppfTotalValue = document.querySelector("#ppf-total-value");
+const ppfUpdatedAt = document.querySelector("#ppf-updated-at");
 const npsHoldingList = document.querySelector("#nps-holding-list");
 const npsWarningList = document.querySelector("#nps-warning-list");
 
@@ -66,6 +76,8 @@ acceptPfEstimateButton.addEventListener("click", acceptPfEstimate);
 importNpsEmailButton.addEventListener("click", importNpsFromEmail);
 savePfProjectionButton.addEventListener("click", savePfProjectionBaseline);
 clearPfProjectionButton.addEventListener("click", clearPfProjectionBaseline);
+savePpfButton.addEventListener("click", savePpfRecord);
+clearPpfButton.addEventListener("click", clearPpfRecord);
 validatePfProjectionButton.addEventListener("click", () => {
   window.open(EPFO_PASSBOOK_URL, "_blank", "noopener,noreferrer");
   setPfProjectionStatus("Opened EPFO. Optional but recommended: compare the estimate with the official balance. If it looks right, click Accept estimate and save.");
@@ -81,8 +93,8 @@ clearNpsButton.addEventListener("click", () => {
 });
 
 downloadXlsButton.addEventListener("click", () => {
-  if (!wealthData.pf && !lastNpsResult && !pfProjection) {
-    setPfProjectionStatus("Create/open a wealth file and save PF or NPS data before downloading an XLS file.");
+  if (!wealthData.pf && !wealthData.ppf && !lastNpsResult && !pfProjection) {
+    setPfProjectionStatus("Create/open a wealth file and save PF, PPF, or NPS data before downloading an XLS file.");
     return;
   }
 
@@ -249,7 +261,20 @@ function hydrateFromWealthData(estimate = null) {
     resetNpsView();
   }
 
+  if (wealthData.ppf) {
+    ppfBalance.value = wealthData.ppf.currentBalance;
+    ppfYearlyContribution.value = wealthData.ppf.yearlyContribution ?? "";
+    ppfAccountLabel.value = wealthData.ppf.accountLabel || "";
+    ppfNotes.value = wealthData.ppf.notes || "";
+  } else {
+    ppfBalance.value = "";
+    ppfYearlyContribution.value = "";
+    ppfAccountLabel.value = "";
+    ppfNotes.value = "";
+  }
+
   renderPfProjection();
+  renderPpf();
   refreshPortfolioSummary();
 }
 
@@ -282,6 +307,33 @@ function clearPfProjectionBaseline() {
   saveWealthFile("Cleared PF baseline and saved the local wealth file.");
 }
 
+function savePpfRecord() {
+  try {
+    wealthData.ppf = buildPpfRecord({
+      currentBalance: ppfBalance.value,
+      yearlyContribution: ppfYearlyContribution.value,
+      accountLabel: ppfAccountLabel.value,
+      notes: ppfNotes.value
+    });
+    renderPpf();
+    refreshPortfolioSummary();
+    saveWealthFile("Saved PPF details to the local wealth file.");
+  } catch (error) {
+    setPpfStatus(error.message);
+  }
+}
+
+function clearPpfRecord() {
+  wealthData.ppf = null;
+  ppfBalance.value = "";
+  ppfYearlyContribution.value = "";
+  ppfAccountLabel.value = "";
+  ppfNotes.value = "";
+  renderPpf();
+  refreshPortfolioSummary();
+  saveWealthFile("Cleared PPF details and saved the local wealth file.");
+}
+
 function renderPfProjection() {
   if (!pfProjection) {
     pfProjectedBalance.textContent = "-";
@@ -301,6 +353,19 @@ function renderPfProjection() {
   }
 
   setPfProjectionStatus(`Loaded PF value ${formatCurrency(pfProjection.projectedBalance)}. No estimate is pending.`);
+}
+
+function renderPpf() {
+  if (!wealthData.ppf) {
+    ppfTotalValue.textContent = "-";
+    ppfUpdatedAt.textContent = "-";
+    setPpfStatus("No PPF data saved yet.");
+    return;
+  }
+
+  ppfTotalValue.textContent = formatCurrency(wealthData.ppf.currentBalance);
+  ppfUpdatedAt.textContent = formatDate(wealthData.ppf.lastUpdatedAt);
+  setPpfStatus(`Loaded PPF value ${formatCurrency(wealthData.ppf.currentBalance)} from local wealth file.`);
 }
 
 async function importNpsFromEmail() {
@@ -406,11 +471,12 @@ function resetNpsView() {
 function refreshPortfolioSummary() {
   const pfValue = pfProjection?.projectedBalance ?? null;
   const npsValue = lastNpsResult?.totalValue ?? null;
-  const total = sumNullable([pfValue, npsValue]);
+  const ppfValue = wealthData.ppf?.currentBalance ?? null;
+  const total = sumNullable([pfValue, ppfValue, npsValue]);
 
   portfolioTotal.textContent = total === null ? "-" : formatCurrency(total);
-  dashboard.hidden = !pfProjection && !lastNpsResult;
-  downloadXlsButton.disabled = !pfProjection && !lastNpsResult;
+  dashboard.hidden = !pfProjection && !lastNpsResult && !wealthData.ppf;
+  downloadXlsButton.disabled = !pfProjection && !lastNpsResult && !wealthData.ppf;
   saveWealthFileButton.disabled = !wealthFileHandle;
   acceptPfEstimateButton.disabled = !pendingPfEstimate;
 }
@@ -473,12 +539,14 @@ function downloadWorkbook(npsResult, pfProjectionResult) {
 
 function buildWorkbookXml(npsResult, pfProjectionResult) {
   const pfValue = pfProjectionResult?.projectedBalance ?? null;
+  const ppfValue = wealthData.ppf?.currentBalance ?? null;
   const npsValue = npsResult?.totalValue ?? null;
-  const combinedValue = sumNullable([pfValue, npsValue]);
+  const combinedValue = sumNullable([pfValue, ppfValue, npsValue]);
   const worksheets = [
     worksheetXml("Summary", [
       ["Asset", "Total Value", "Last Updated"],
       ["PF / EPFO", pfValue, wealthData.pf?.lastUpdatedAt || ""],
+      ["PPF", ppfValue, wealthData.ppf?.lastUpdatedAt || ""],
       ["NPS", npsValue, wealthData.nps?.lastUpdatedAt || ""],
       ["Combined Total", combinedValue, new Date().toISOString()]
     ]),
@@ -492,6 +560,14 @@ function buildWorkbookXml(npsResult, pfProjectionResult) {
       ["Projected PF balance", pfProjectionResult?.projectedBalance ?? null],
       ["Pending estimate accepted", pendingPfEstimate ? "No" : "Yes"],
       ["Validation recommendation", pfProjectionResult ? "Optional but recommended: manually log into EPFO and compare with official current balance" : ""]
+    ]),
+    worksheetXml("PPF", [
+      ["Metric", "Value"],
+      ["Current PPF balance", wealthData.ppf?.currentBalance ?? null],
+      ["Yearly contribution", wealthData.ppf?.yearlyContribution ?? null],
+      ["Account label", wealthData.ppf?.accountLabel ?? ""],
+      ["Notes", wealthData.ppf?.notes ?? ""],
+      ["Last updated at", wealthData.ppf?.lastUpdatedAt ?? ""]
     ]),
     worksheetXml("NPS Summary", [
       ["Metric", "Value"],
@@ -585,6 +661,18 @@ function setWealthFileStatus(message) {
 
 function setPfProjectionStatus(message) {
   pfProjectionStatus.textContent = message;
+}
+
+function setPpfStatus(message) {
+  ppfStatus.textContent = message;
+}
+
+function formatDate(value) {
+  return new Intl.DateTimeFormat("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric"
+  }).format(new Date(value));
 }
 
 function setNpsEmailStatus(message) {
