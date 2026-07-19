@@ -109,6 +109,37 @@ button:disabled {
   margin-bottom: 0.4rem;
 }
 
+.help-box {
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  margin-top: 1rem;
+  padding: 0.9rem 1rem;
+}
+
+.help-box summary {
+  cursor: pointer;
+  font-weight: 900;
+}
+
+.help-box ol {
+  color: var(--muted);
+  line-height: 1.55;
+  margin: 0.8rem 0 0;
+  padding-left: 1.2rem;
+}
+
+.help-box li {
+  margin-bottom: 0.4rem;
+}
+
+.help-box p {
+  color: var(--muted);
+  font-size: 0.92rem;
+  line-height: 1.55;
+  margin: 0.8rem 0 0;
+}
+
 .hero {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 320px;
@@ -139,6 +170,11 @@ code {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
   font-size: 0.9em;
   padding: 0.1rem 0.3rem;
+}
+
+a {
+  color: var(--primary);
+  font-weight: 800;
 }
 
 h1 {

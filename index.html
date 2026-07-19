@@ -26,10 +26,26 @@
               <button id="google-login-close" type="button" aria-label="Close Google login">Close</button>
             </div>
             <p class="hint">
-              Use direct Google login to create/update a Google Sheet in the signed-in account. First-time setup:
-              create a Google OAuth Web Client ID, enable Google Sheets API, and allow
-              <code>http://localhost:5173</code> as a JavaScript origin.
+              This connects the dashboard to your own Google account and creates/updates a Google Sheet in your Drive.
+              Google requires a one-time Client ID before a local app can show the sign-in screen.
             </p>
+            <details class="help-box" open>
+              <summary>Simple setup help</summary>
+              <ol>
+                <li>Open <a href="https://console.cloud.google.com" target="_blank" rel="noreferrer">Google Cloud Console</a>.</li>
+                <li>Create/select a project, then search for and enable <strong>Google Sheets API</strong>.</li>
+                <li>Open <strong>APIs & Services -> OAuth consent screen</strong> and complete the basic app details.</li>
+                <li>Open <strong>Credentials -> Create credentials -> OAuth client ID</strong>.</li>
+                <li>Choose <strong>Web application</strong>.</li>
+                <li>Add this under <strong>Authorized JavaScript origins</strong>: <code>http://localhost:5173</code>.</li>
+                <li>Copy the generated <strong>Client ID</strong> and paste it below.</li>
+                <li>Click <strong>Sign in and save</strong>. Google will ask which account to use.</li>
+              </ol>
+              <p>
+                Leave Spreadsheet ID blank the first time. A new Google Sheet will be created in your Drive; copy its
+                ID back here if you want future saves to update the same file.
+              </p>
+            </details>
             <div class="settings-grid compact-settings">
               <label class="wide-field">
                 <span>OAuth Web Client ID</span>
@@ -44,7 +60,7 @@
                 <span>Auto-save after PF/NPS updates when Spreadsheet ID is set</span>
               </label>
               <label class="wide-field">
-                <span>Apps Script Web App URL, optional fallback</span>
+                <span>Advanced fallback: Apps Script Web App URL</span>
                 <input id="google-script-url" type="url" spellcheck="false" placeholder="https://script.google.com/macros/s/.../exec">
               </label>
             </div>

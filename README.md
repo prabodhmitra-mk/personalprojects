@@ -52,6 +52,9 @@ Open the **Google Login** menu in the top-right corner to enter the OAuth Client
 
 ### Option 1: Direct Google OAuth
 
+Think of the OAuth Client ID as a safe "door key" that lets this local dashboard ask Google for permission to update your own Sheet.
+You create that key once in your Google account, paste it into the dashboard, and then use **Google Login**.
+
 One-time Google Cloud setup:
 
 1. Open Google Cloud Console:
@@ -62,7 +65,7 @@ One-time Google Cloud setup:
 
 2. Create or select a project.
 3. Enable **Google Sheets API**.
-4. Configure the OAuth consent screen.
+4. Configure the OAuth consent screen. For personal use, it is fine to keep the app in testing and add your own Google email as a test user.
 5. Create credentials:
    - Type: **OAuth client ID**
    - Application type: **Web application**
@@ -73,8 +76,9 @@ One-time Google Cloud setup:
    ```
 
 7. Copy the OAuth Client ID.
-8. Paste it into **OAuth Web Client ID** in the app.
-9. Click **Sign in and save to Google Sheets**.
+8. In this dashboard, click **Google Login** in the top-right corner.
+9. Paste it into **OAuth Web Client ID**.
+10. Click **Sign in and save**.
 
 If **Spreadsheet ID** is blank, the app creates a new spreadsheet in the signed-in Google account.
 The returned/opened Google Sheet ID is saved in the app so future saves update the same sheet.
