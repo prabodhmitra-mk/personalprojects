@@ -5,6 +5,7 @@ import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
 const DEFAULT_SUBJECT_KEYWORDS = ["nps", "statement"];
 const MAX_ATTACHMENT_BYTES = 15 * 1024 * 1024;
 const MAX_MESSAGES = 50;
+const DEFAULT_SCAN_LIMIT = 150;
 
 export async function importNpsStatementsFromEmail(settings) {
   const normalized = normalizeSettings(settings);
@@ -24,23 +25,26 @@ export async function importNpsStatementsFromEmail(settings) {
   const textParts = [];
 
   try {
-    await client.connect();
-    await client.mailboxOpen(normalized.mailbox);
+    await runImapStep("connect to IMAP server", () => client.connect());
+    const mailbox = await runImapStep(`open mailbox "${normalized.mailbox}"`, () => client.mailboxOpen(normalized.mailbox));
 
     const sinceDate = new Date(Date.now() - normalized.sinceDays * 24 * 60 * 60 * 1000);
-    const uids = await client.search({ since: sinceDate });
-    const latestUids = [...uids].sort((left, right) => right - left).slice(0, normalized.maxMessages);
+    const candidates = await fetchCandidateMessages(client, mailbox, normalized);
+    let matchedMessages = 0;
 
-    for (const uid of latestUids) {
-      const message = await client.fetchOne(uid, {
-        envelope: true,
-        source: true
-      });
+    for (const message of candidates) {
       const subject = message.envelope?.subject || "";
+      const messageDate = message.envelope?.date || null;
+
+      if (messageDate && messageDate < sinceDate) {
+        continue;
+      }
 
       if (!subjectMatches(subject, normalized.subjectKeywords)) {
         continue;
       }
+
+      matchedMessages += 1;
 
       const parsed = await simpleParser(message.source);
       const relevantAttachments = parsed.attachments.filter((attachment) => attachment.content?.length > 0);
@@ -50,9 +54,9 @@ export async function importNpsStatementsFromEmail(settings) {
       }
 
       const messageInfo = {
-        uid,
+        uid: message.uid,
         subject,
-        date: parsed.date?.toISOString() || message.envelope?.date?.toISOString() || null,
+        date: parsed.date?.toISOString() || messageDate?.toISOString() || null,
         from: parsed.from?.text || "",
         attachmentCount: relevantAttachments.length
       };
@@ -61,7 +65,7 @@ export async function importNpsStatementsFromEmail(settings) {
       for (const attachment of relevantAttachments) {
         const extracted = await extractAttachmentText(attachment, normalized.attachmentPassword);
         attachments.push({
-          messageUid: uid,
+          messageUid: message.uid,
           messageSubject: subject,
           filename: attachment.filename || "attachment",
           contentType: attachment.contentType || "",
@@ -77,6 +81,10 @@ Attachment: ${attachment.filename || "attachment"}
 ${extracted.text}`);
         }
       }
+
+      if (matchedMessages >= normalized.maxMessages) {
+        break;
+      }
     }
   } finally {
     try {
@@ -91,6 +99,7 @@ ${extracted.text}`);
     messageCount: messages.length,
     attachmentCount: attachments.length,
     textLength: textParts.join("\n\n").length,
+    scannedMessageLimit: normalized.scanLimit,
     messages,
     attachments,
     statementText: textParts.join("\n\n")
@@ -124,8 +133,65 @@ export function normalizeSettings(settings) {
     subjectKeywords: normalizeSubjectKeywords(settings.subjectKeywords),
     attachmentPassword: String(settings.attachmentPassword || ""),
     sinceDays: clampInteger(settings.sinceDays, 1, 3650, 365),
-    maxMessages: clampInteger(settings.maxMessages, 1, MAX_MESSAGES, 25)
+    maxMessages: clampInteger(settings.maxMessages, 1, MAX_MESSAGES, 25),
+    scanLimit: clampInteger(settings.scanLimit, 10, 1000, DEFAULT_SCAN_LIMIT)
   };
+}
+
+async function fetchCandidateMessages(client, mailbox, normalized) {
+  const exists = mailbox.exists || client.mailbox?.exists || 0;
+
+  if (!exists) {
+    return [];
+  }
+
+  const start = Math.max(1, exists - normalized.scanLimit + 1);
+  const range = `${start}:*`;
+  const messages = [];
+
+  await runImapStep(`fetch latest ${exists - start + 1} message(s)`, async () => {
+    for await (const message of client.fetch(range, {
+      uid: true,
+      envelope: true,
+      source: true
+    })) {
+      messages.push(message);
+    }
+  });
+
+  return messages.sort((left, right) => {
+    const leftDate = left.envelope?.date?.getTime() || 0;
+    const rightDate = right.envelope?.date?.getTime() || 0;
+
+    if (leftDate !== rightDate) {
+      return rightDate - leftDate;
+    }
+
+    return (right.uid || 0) - (left.uid || 0);
+  });
+}
+
+async function runImapStep(step, operation) {
+  try {
+    return await operation();
+  } catch (error) {
+    throw new Error(`IMAP ${step} failed: ${formatImapError(error)}`);
+  }
+}
+
+function formatImapError(error) {
+  const details = [
+    error.responseText,
+    error.serverResponse,
+    error.response,
+    error.code,
+    error.command,
+    error.message
+  ]
+    .filter(Boolean)
+    .map((item) => String(item));
+
+  return details.length > 0 ? [...new Set(details)].join(" | ") : "Unknown IMAP error";
 }
 
 function normalizeSubjectKeywords(value) {

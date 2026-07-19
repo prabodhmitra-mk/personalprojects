@@ -74,7 +74,8 @@ Use the NPS email section in the dashboard:
    ```
 
 5. Enter the NPS attachment/PDF password.
-6. Click **Read NPS email statement**.
+6. Keep **Scan latest emails** at `150`, or reduce it if your mailbox gives IMAP command errors.
+7. Click **Read NPS email statement**.
 
 The local server searches recent emails whose subject contains all configured keywords, reads supported attachments, extracts statement text, and runs the NPS parser.
 
@@ -90,6 +91,13 @@ Security notes:
 - Email credentials and attachment password are sent only to the local `npm start` server for that request.
 - They are not saved in local storage or written to disk by the app.
 - Use an app password instead of your main mailbox password where possible.
+
+If you see `Command failed`, check:
+
+- IMAP is enabled for your mailbox.
+- You are using an app password where required, especially Gmail.
+- Mailbox is correct, usually `INBOX`.
+- Reduce **Scan latest emails** and retry.
 
 ## Run locally
 

@@ -10,7 +10,8 @@ test("normalizes NPS email import settings", () => {
     password: "app-password",
     subjectKeywords: "nps, statement",
     sinceDays: "30",
-    maxMessages: "5"
+    maxMessages: "5",
+    scanLimit: "75"
   });
 
   assert.equal(settings.host, "imap.gmail.com");
@@ -20,6 +21,7 @@ test("normalizes NPS email import settings", () => {
   assert.deepEqual(settings.subjectKeywords, ["nps", "statement"]);
   assert.equal(settings.sinceDays, 30);
   assert.equal(settings.maxMessages, 5);
+  assert.equal(settings.scanLimit, 75);
 });
 
 test("requires mailbox credentials for NPS email import", () => {

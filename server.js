@@ -194,6 +194,10 @@ function formatEmailImportError(error) {
     return "Could not log in to the mailbox. Check your email/app password and IMAP settings.";
   }
 
+  if (/Command failed/i.test(error.message || "")) {
+    return `${error.message}. Check that IMAP is enabled, mailbox is correct, and you are using an app password. If it still fails, reduce "Scan latest emails" and try again.`;
+  }
+
   if (/ENOTFOUND|ECONNREFUSED|ETIMEDOUT|network|certificate/i.test(error.message || "")) {
     return "Could not connect to the IMAP server. Check host, port, secure setting, and network access.";
   }

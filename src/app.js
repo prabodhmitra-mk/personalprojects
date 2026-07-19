@@ -32,6 +32,7 @@ const npsEmailPassword = document.querySelector("#nps-email-password");
 const npsEmailMailbox = document.querySelector("#nps-email-mailbox");
 const npsEmailSubject = document.querySelector("#nps-email-subject");
 const npsEmailSinceDays = document.querySelector("#nps-email-since-days");
+const npsEmailScanLimit = document.querySelector("#nps-email-scan-limit");
 const npsAttachmentPassword = document.querySelector("#nps-attachment-password");
 const pfBaselineBalance = document.querySelector("#pf-baseline-balance");
 const pfBaselineEmployee = document.querySelector("#pf-baseline-employee");
@@ -321,6 +322,7 @@ async function importNpsFromEmail() {
         mailbox: npsEmailMailbox.value.trim() || "INBOX",
         subjectKeywords: npsEmailSubject.value.trim() || "nps,statement",
         sinceDays: Number(npsEmailSinceDays.value || 365),
+        scanLimit: Number(npsEmailScanLimit.value || 150),
         attachmentPassword: npsAttachmentPassword.value
       })
     });
