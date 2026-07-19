@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Wealth Management Dashboard</title>
+    <link rel="stylesheet" href="./styles.css">
+    <script type="module" src="./src/app.js"></script>
+  </head>
+  <body>
+    <main class="shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Wealth Management Dashboard</p>
+          <strong>PF + NPS Tracker</strong>
+        </div>
+      </header>
+
+      <section class="hero">
+        <div>
+          <p class="eyebrow">Local portfolio view</p>
+          <h1>Track PF projection and NPS value in one place</h1>
+          <p class="hero-copy">
+            Select a local wealth file, keep PF/NPS data on your laptop, and export a summary workbook when needed.
+          </p>
+        </div>
+        <div class="hero-card">
+          <span class="badge">Privacy-first</span>
+          <strong>No credential storage</strong>
+          <p>Your wealth data is stored in the local file you choose. Email credentials are used only for a local NPS import request.</p>
+        </div>
+      </section>
+
+      <section class="grid">
+        <article class="panel">
+          <span class="step">1</span>
+          <h2>Local wealth file</h2>
+          <p>
+            Create or open a local JSON file on your laptop. The app reads this file on startup when browser permission
+            is available and updates PF estimates only after a full month has elapsed.
+          </p>
+          <div class="actions">
+            <button id="create-wealth-file" class="primary" type="button">Create wealth file</button>
+            <button id="open-wealth-file" type="button">Open existing wealth file</button>
+            <button id="save-wealth-file" type="button" disabled>Save wealth file</button>
+            <button id="accept-pf-estimate" type="button" disabled>Accept estimate and save</button>
+          </div>
+          <p class="hint">Use Chrome or Edge for local file access. If less than one full month has passed, PF value is not increased.</p>
+          <p id="wealth-file-status" class="status">No local wealth file selected.</p>
+        </article>
+
+        <article class="panel">
+          <span class="step">2</span>
+          <h2>Manual PF projection baseline</h2>
+          <p>
+            Enter your current EPFO balance and last month employee/employer contributions. The app saves this locally
+            and estimates future PF balance by assuming the same combined amount is deposited every completed month.
+          </p>
+          <div class="settings-grid">
+            <label>
+              <span>Current PF balance</span>
+              <input id="pf-baseline-balance" type="number" min="0" step="0.01" placeholder="1317956">
+            </label>
+            <label>
+              <span>Last month employee contribution</span>
+              <input id="pf-baseline-employee" type="number" min="0" step="0.01" placeholder="24308">
+            </label>
+            <label>
+              <span>Last month employer contribution</span>
+              <input id="pf-baseline-employer" type="number" min="0" step="0.01" placeholder="23058">
+            </label>
+          </div>
+          <div class="actions">
+            <button id="save-pf-projection" class="primary" type="button">Save PF projection baseline</button>
+            <button id="download-xls" type="button" disabled>Download local XLS</button>
+            <button id="validate-pf-projection" type="button">Optional: validate in EPFO</button>
+            <button id="clear-pf-projection" type="button">Clear projection baseline</button>
+          </div>
+          <p id="pf-projection-status" class="status">No saved PF projection baseline yet.</p>
+        </article>
+
+        <article class="panel">
+          <span class="step">3</span>
+          <h2>Manual PPF details</h2>
+          <p>
+            Enter your current PPF balance manually. This value is saved in the local wealth file and included in the
+            combined wealth summary and Excel export.
+          </p>
+          <div class="settings-grid">
+            <label>
+              <span>Current PPF balance</span>
+              <input id="ppf-balance" type="number" min="0" step="0.01" placeholder="250000">
+            </label>
+            <label>
+              <span>Yearly contribution, optional</span>
+              <input id="ppf-yearly-contribution" type="number" min="0" step="0.01" placeholder="150000">
+            </label>
+            <label>
+              <span>Account label, optional</span>
+              <input id="ppf-account-label" type="text" placeholder="Bank / account nickname">
+            </label>
+            <label>
+              <span>Notes, optional</span>
+              <input id="ppf-notes" type="text" placeholder="Last checked date, branch, etc.">
+            </label>
+          </div>
+          <div class="actions">
+            <button id="save-ppf" class="primary" type="button">Save PPF</button>
+            <button id="clear-ppf" type="button">Clear PPF</button>
+          </div>
+          <p id="ppf-status" class="status">No PPF data saved yet.</p>
+        </article>
+
+        <article class="panel">
+          <span class="step">4</span>
+          <h2>Import NPS statement from email</h2>
+          <p>
+            The local server can read recent emails where the subject contains <strong>nps</strong> and
+            <strong>statement</strong>, then parse supported attachments. Credentials are used for this request only.
+          </p>
+          <div class="settings-grid">
+            <label>
+              <span>IMAP host</span>
+              <input id="nps-email-host" type="text" value="imap.gmail.com" spellcheck="false">
+            </label>
+            <label>
+              <span>Port</span>
+              <input id="nps-email-port" type="number" value="993">
+            </label>
+            <label>
+              <span>Email username</span>
+              <input id="nps-email-username" type="email" autocomplete="username" spellcheck="false">
+            </label>
+            <label>
+              <span>Email/app password</span>
+              <input id="nps-email-password" type="password" autocomplete="current-password">
+            </label>
+            <label>
+              <span>Mailbox</span>
+              <input id="nps-email-mailbox" type="text" value="INBOX" spellcheck="false">
+            </label>
+            <label>
+              <span>Subject keywords</span>
+              <input id="nps-email-subject" type="text" value="nps,statement" spellcheck="false">
+            </label>
+            <label>
+              <span>Look back days</span>
+              <input id="nps-email-since-days" type="number" value="365" min="1">
+            </label>
+            <label>
+              <span>Scan latest emails</span>
+              <input id="nps-email-scan-limit" type="number" value="150" min="10">
+            </label>
+            <label>
+              <span>NPS attachment password</span>
+              <input id="nps-attachment-password" type="password">
+            </label>
+          </div>
+          <div class="actions">
+            <button id="import-nps-email" class="primary" type="button">Read NPS email statement</button>
+          </div>
+          <p class="hint">
+            Gmail usually requires an app password with IMAP enabled. The NPS statement password is only used to open the attachment.
+          </p>
+          <textarea id="nps-input" hidden></textarea>
+          <p id="nps-email-status-message" class="status">Waiting for NPS email import settings.</p>
+        </article>
+
+        <article class="panel">
+          <span class="step">5</span>
+          <h2>NPS data status</h2>
+          <p>
+            NPS values are imported from email statements only. Use this section to clear the currently saved NPS value
+            from the selected local wealth file.
+          </p>
+          <div class="actions">
+            <button id="clear-nps" type="button">Clear NPS</button>
+          </div>
+          <p id="nps-status-message" class="status">Waiting for NPS email import.</p>
+        </article>
+      </section>
+
+      <section id="dashboard" class="dashboard" hidden>
+        <div class="summary-card total">
+          <span>Combined PF + NPS value</span>
+          <strong id="portfolio-total">-</strong>
+        </div>
+        <div class="summary-card projection-total">
+          <span>Projected PF balance</span>
+          <strong id="pf-projected-balance">-</strong>
+        </div>
+        <div class="summary-card ppf-total">
+          <span>Total PPF value</span>
+          <strong id="ppf-total-value">-</strong>
+        </div>
+        <div class="summary-card">
+          <span>Projection monthly deposit</span>
+          <strong id="pf-projection-monthly-deposit">-</strong>
+        </div>
+        <div class="summary-card">
+          <span>Projection months</span>
+          <strong id="pf-projection-months">-</strong>
+        </div>
+        <div class="summary-card nps-total">
+          <span>Total NPS value</span>
+          <strong id="nps-total-value">-</strong>
+        </div>
+        <div class="summary-card">
+          <span>NPS contribution</span>
+          <strong id="nps-contribution-total">-</strong>
+        </div>
+        <div class="summary-card">
+          <span>PPF last updated</span>
+          <strong id="ppf-updated-at">-</strong>
+        </div>
+        <div class="summary-card">
+          <span>NPS confidence</span>
+          <strong id="nps-confidence">-</strong>
+        </div>
+        <div class="summary-card">
+          <span>NPS source</span>
+          <strong id="nps-source">-</strong>
+        </div>
+
+        <article class="panel">
+          <h2>NPS parser notes</h2>
+          <ul id="nps-warning-list" class="warning-list"></ul>
+        </article>
+
+        <article class="panel records wide">
+          <h2>NPS holdings</h2>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Tier</th>
+                  <th>Scheme</th>
+                  <th>Units</th>
+                  <th>NAV</th>
+                  <th>Value</th>
+                  <th>Raw row</th>
+                </tr>
+              </thead>
+              <tbody id="nps-holding-list"></tbody>
+            </table>
+          </div>
+        </article>
+      </section>
+    </main>
+  </body>
+</html>
