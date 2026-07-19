@@ -126,28 +126,21 @@
           <p class="hint">
             Gmail usually requires an app password with IMAP enabled. The NPS statement password is only used to open the attachment.
           </p>
+          <textarea id="nps-input" hidden></textarea>
           <p id="nps-email-status-message" class="status">Waiting for NPS email import settings.</p>
         </article>
 
         <article class="panel">
           <span class="step">4</span>
-          <h2>Import NPS holdings/statement manually</h2>
+          <h2>NPS data status</h2>
           <p>
-            You can still open the official NPS CRA portal, log in yourself, then copy or export your holdings/statement text here.
+            NPS values are imported from email statements only. Use this section to clear the currently saved NPS value
+            from the selected local wealth file.
           </p>
-          <button id="open-nps-portal" class="primary" type="button">Open NPS CRA portal</button>
-          <label class="file-picker">
-            <span>Upload NPS HTML, TXT, or CSV</span>
-            <input id="nps-file" type="file" accept=".html,.htm,.txt,.csv,text/html,text/plain,text/csv">
-          </label>
-          <label class="textarea-label" for="nps-input">Or paste copied NPS holding/statement text</label>
-          <textarea id="nps-input" placeholder="Paste NPS holdings, account statement, or valuation details here..."></textarea>
           <div class="actions">
-            <button id="parse-nps" class="primary" type="button">Get NPS value</button>
-            <button id="load-nps-sample" type="button">Load NPS sample</button>
             <button id="clear-nps" type="button">Clear NPS</button>
           </div>
-          <p id="nps-status-message" class="status">Waiting for NPS content.</p>
+          <p id="nps-status-message" class="status">Waiting for NPS email import.</p>
         </article>
       </section>
 

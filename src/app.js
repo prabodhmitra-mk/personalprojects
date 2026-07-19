@@ -14,20 +14,14 @@ import {
 } from "./wealthFile.js";
 
 const EPFO_PASSBOOK_URL = "https://passbook.epfindia.gov.in/MemberPassBook/Login";
-const NPS_PORTAL_URL = "https://cra-nsdl.com/CRA/";
-
 const createWealthFileButton = document.querySelector("#create-wealth-file");
 const openWealthFileButton = document.querySelector("#open-wealth-file");
 const saveWealthFileButton = document.querySelector("#save-wealth-file");
 const acceptPfEstimateButton = document.querySelector("#accept-pf-estimate");
 const wealthFileStatus = document.querySelector("#wealth-file-status");
-const openNpsPortalButton = document.querySelector("#open-nps-portal");
-const npsFileInput = document.querySelector("#nps-file");
 const npsInput = document.querySelector("#nps-input");
-const parseNpsButton = document.querySelector("#parse-nps");
 const importNpsEmailButton = document.querySelector("#import-nps-email");
 const clearNpsButton = document.querySelector("#clear-nps");
-const sampleNpsButton = document.querySelector("#load-nps-sample");
 const downloadXlsButton = document.querySelector("#download-xls");
 const npsStatusMessage = document.querySelector("#nps-status-message");
 const npsEmailStatusMessage = document.querySelector("#nps-email-status-message");
@@ -68,24 +62,6 @@ createWealthFileButton.addEventListener("click", createWealthFile);
 openWealthFileButton.addEventListener("click", openWealthFile);
 saveWealthFileButton.addEventListener("click", () => saveWealthFile("Saved current wealth data to the selected local file."));
 acceptPfEstimateButton.addEventListener("click", acceptPfEstimate);
-
-openNpsPortalButton.addEventListener("click", () => {
-  window.open(NPS_PORTAL_URL, "_blank", "noopener,noreferrer");
-  setNpsStatus("Opened the NPS CRA portal in a new tab. Log in there, then copy or download your holdings/statement content and import it below.");
-});
-
-npsFileInput.addEventListener("change", async (event) => {
-  const [file] = event.target.files || [];
-  if (!file) {
-    return;
-  }
-
-  const text = await file.text();
-  npsInput.value = text;
-  parseNpsAndRender();
-});
-
-parseNpsButton.addEventListener("click", parseNpsAndRender);
 importNpsEmailButton.addEventListener("click", importNpsFromEmail);
 savePfProjectionButton.addEventListener("click", savePfProjectionBaseline);
 clearPfProjectionButton.addEventListener("click", clearPfProjectionBaseline);
@@ -96,25 +72,11 @@ validatePfProjectionButton.addEventListener("click", () => {
 
 clearNpsButton.addEventListener("click", () => {
   npsInput.value = "";
-  npsFileInput.value = "";
   lastNpsResult = null;
   wealthData.nps = null;
   resetNpsView();
   refreshPortfolioSummary();
   saveWealthFile("Cleared NPS data and saved the local wealth file.");
-});
-
-sampleNpsButton.addEventListener("click", () => {
-  npsInput.value = `NPS Holdings Statement
-PRAN: 110012345678
-Total Contribution: Rs 4,20,000
-Total NPS Corpus: Rs 5,84,250
-
-Tier I Scheme Units NAV Current Value
-Tier I Equity Scheme E 1,250.0000 62.50 78,125
-Tier I Corporate Bond Scheme C 3,100.0000 38.75 1,20,125
-Tier I Government Securities Scheme G 7,800.0000 49.50 3,86,000`;
-  parseNpsAndRender();
 });
 
 downloadXlsButton.addEventListener("click", () => {

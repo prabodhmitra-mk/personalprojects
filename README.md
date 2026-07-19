@@ -7,7 +7,7 @@ A small privacy-first wealth dashboard that helps you store PF/NPS data in a loc
 1. Start the app locally.
 2. Create or open a local wealth file on your laptop.
 3. Enter a manual PF projection baseline: current PF balance plus last month employee/employer contribution.
-4. Import NPS from email attachments or manually import copied/downloaded NPS holdings or statement content.
+4. Import NPS from email statement attachments.
 5. Review projected PF, NPS, and combined portfolio totals.
 6. Click **Download local XLS** if you want an Excel copy.
 
@@ -55,9 +55,7 @@ The local wealth file and Excel workbook include:
 - Projected PF balance.
 - Optional validation recommendation.
 
-## Import NPS data
-
-### Option 1: Read NPS statements from email
+## Import NPS data from email
 
 Use the NPS email section in the dashboard:
 
@@ -92,23 +90,6 @@ Security notes:
 - Email credentials and attachment password are sent only to the local `npm start` server for that request.
 - They are not saved in local storage or written to disk by the app.
 - Use an app password instead of your main mailbox password where possible.
-
-### Option 2: Manual NPS import
-
-Use the manual NPS section in the dashboard:
-
-1. Click **Open NPS CRA portal**.
-2. Log in manually on the official NPS site.
-3. Copy or export your holdings/statement content.
-4. Paste or upload it in the NPS import section.
-5. Click **Get NPS value**.
-
-The NPS parser detects:
-
-- Total NPS corpus/current value.
-- Total contribution, when available.
-- PRAN, when available.
-- Holding rows with tier, scheme, units, NAV, and current value.
 
 ## Run locally
 
