@@ -32,11 +32,14 @@ export function parseNpsInput(rawInput) {
     .map((line) => line.trim())
     .filter(Boolean);
 
+  const investmentSummary = findInvestmentSummary(lines);
   const labelledTotal = findLabelledTotal(lines);
   const holdings = findHoldings(lines);
   const holdingsTotal = sumHoldings(holdings);
-  const contributionTotal = findLabelledAmount(lines, CONTRIBUTION_LABELS);
-  const selected = labelledTotal
+  const contributionTotal = investmentSummary?.contributionTotal ?? findLabelledAmount(lines, CONTRIBUTION_LABELS);
+  const selected = investmentSummary
+    ? { value: investmentSummary.totalValue, source: "investment-summary", confidence: 0.95 }
+    : labelledTotal
     || (holdingsTotal !== null ? { value: holdingsTotal, source: "holding-sum", confidence: 0.72 } : null);
   const warnings = [];
 
@@ -133,15 +136,44 @@ function findLabelledAmount(lines, labels) {
   return null;
 }
 
+function findInvestmentSummary(lines) {
+  const summaryIndex = lines.findIndex((line) => /investment\s+summary/i.test(line));
+  if (summaryIndex === -1) {
+    return null;
+  }
+
+  for (let index = summaryIndex + 1; index < Math.min(lines.length, summaryIndex + 20); index += 1) {
+    const amounts = extractAmounts(lines[index]);
+    const hasCurrencySignal = /₹|rs\.?|inr/i.test(lines[index]);
+
+    if (!hasCurrencySignal || amounts.length < 5) {
+      continue;
+    }
+
+    return {
+      totalValue: amounts[0],
+      contributionTotal: amounts.length >= 3 ? amounts[2] : null,
+      raw: lines[index]
+    };
+  }
+
+  return null;
+}
+
 function findHoldings(lines) {
   const holdings = [];
   const seen = new Set();
+  const scopedLines = getHoldingSectionLines(lines);
 
-  for (let index = 0; index < lines.length; index += 1) {
+  for (let index = 0; index < scopedLines.length; index += 1) {
+    if (isHoldingNoiseLine(scopedLines[index])) {
+      continue;
+    }
+
     const candidates = [
-      lines[index],
-      `${lines[index]} ${lines[index + 1] || ""}`,
-      `${lines[index]} ${lines[index + 1] || ""} ${lines[index + 2] || ""}`
+      scopedLines[index],
+      `${scopedLines[index]} ${scopedLines[index + 1] || ""}`,
+      `${scopedLines[index]} ${scopedLines[index + 1] || ""} ${scopedLines[index + 2] || ""}`
     ];
 
     for (const candidate of candidates) {
@@ -162,6 +194,20 @@ function findHoldings(lines) {
   }
 
   return holdings;
+}
+
+function getHoldingSectionLines(lines) {
+  const start = lines.findIndex((line) => /investment\s+details\s*-\s*scheme\s+wise\s+summary/i.test(line));
+  if (start === -1) {
+    return lines;
+  }
+
+  const relativeEnd = lines.slice(start + 1).findIndex((line) =>
+    /\b(?:in\s+case\s+of\s+debit|changes\s+made|contribution\/redemption|transaction\s+details|notes)\b/i.test(line));
+
+  return relativeEnd === -1
+    ? lines.slice(start + 1)
+    : lines.slice(start + 1, start + 1 + relativeEnd);
 }
 
 function parseHoldingLine(line) {
@@ -187,9 +233,13 @@ function parseHoldingLine(line) {
 
   const scheme = sanitizeSchemeName(line);
   const tier = line.match(TIER_PATTERN)?.[0]?.replace(/\s+/g, " ") || null;
-  const value = amounts.at(-1);
-  const nav = amounts.length >= 3 ? amounts.at(-2) : null;
-  const units = amounts.length >= 3 ? amounts.at(-3) : amounts[0];
+  const statementSchemeSummary = /pension\s+fund\s+scheme/i.test(line)
+    && /\bpop\b/i.test(line)
+    && amounts.length >= 3
+    && !/\b(?:contribution|closing\s+balance|opening\s+balance|billing)\b/i.test(line);
+  const value = statementSchemeSummary ? amounts[0] : amounts.at(-1);
+  const units = statementSchemeSummary ? amounts[1] : amounts.length >= 3 ? amounts.at(-3) : amounts[0];
+  const nav = statementSchemeSummary ? amounts[2] : amounts.length >= 3 ? amounts.at(-2) : null;
 
   return {
     scheme,
@@ -208,7 +258,18 @@ function sanitizeSchemeName(line) {
     .replace(/\s+/g, " ")
     .trim();
 
-  return scheme || "NPS holding";
+  if (!scheme) {
+    return "NPS holding";
+  }
+
+  const pensionFundMatch = /\b(?:SBI|HDFC|ICICI|KOTAK|AXIS|UTI|LIC|TATA|ADITYA|MAX)[A-Z\s]+PENSION\s+FUND\s+SCHEME\b/i.exec(scheme);
+  return pensionFundMatch ? scheme.slice(pensionFundMatch.index).trim() : scheme;
+}
+
+function isHoldingNoiseLine(line) {
+  return /\b(?:investment\s+details|scheme\s+wise\s+value|holdings\(investments\)|particulars\s+total\s+units)\b/i.test(line)
+    || /^\s*\(?[A-E]\)?(?:\s+\(?[A-E]\)?|\s+[-=+*/()A-E])+/i.test(line)
+    || /^₹\)?/i.test(line);
 }
 
 function sumHoldings(holdings) {
