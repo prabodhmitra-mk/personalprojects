@@ -38,6 +38,9 @@ const savePfProjectionButton = document.querySelector("#save-pf-projection");
 const validatePfProjectionButton = document.querySelector("#validate-pf-projection");
 const clearPfProjectionButton = document.querySelector("#clear-pf-projection");
 const pfProjectionStatus = document.querySelector("#pf-projection-status");
+const googleLoginToggle = document.querySelector("#google-login-toggle");
+const googleLoginPopover = document.querySelector("#google-login-popover");
+const googleLoginClose = document.querySelector("#google-login-close");
 const googleOauthClientId = document.querySelector("#google-oauth-client-id");
 const googleScriptUrl = document.querySelector("#google-script-url");
 const googleSpreadsheetId = document.querySelector("#google-spreadsheet-id");
@@ -84,6 +87,12 @@ parseNpsButton.addEventListener("click", parseNpsAndRender);
 importNpsEmailButton.addEventListener("click", importNpsFromEmail);
 savePfProjectionButton.addEventListener("click", savePfProjectionBaseline);
 clearPfProjectionButton.addEventListener("click", clearPfProjectionBaseline);
+googleLoginToggle.addEventListener("click", () => {
+  googleLoginPopover.hidden = !googleLoginPopover.hidden;
+});
+googleLoginClose.addEventListener("click", () => {
+  googleLoginPopover.hidden = true;
+});
 saveGoogleOauthButton.addEventListener("click", () => saveToGoogleSheetsWithOAuth({ reason: "Manual Google OAuth save" }));
 saveGoogleSheetsButton.addEventListener("click", () => saveToGoogleSheets({ openResult: true, reason: "Manual Google Sheets save" }));
 validatePfProjectionButton.addEventListener("click", () => {

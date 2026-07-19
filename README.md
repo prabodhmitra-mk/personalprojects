@@ -1,12 +1,12 @@
-# PF and NPS Portfolio Dashboard
+# Wealth Management Dashboard
 
-A small privacy-first web app that helps you project PF value, import NPS holdings/statement data, and export a combined Excel workbook.
+A small privacy-first wealth dashboard that helps you project PF value, import NPS holdings/statement data, and sync/export a combined PF/NPS workbook.
 
 ## How it works
 
 1. Start the app locally.
 2. Enter a manual PF projection baseline: current PF balance plus last month employee/employer contribution.
-3. Configure optional Google Sheets/Drive storage using the included Apps Script.
+3. Use **Google Login** in the top-right corner to configure optional Google Sheets/Drive sync.
 4. Import NPS from email attachments or manually import copied/downloaded NPS holdings or statement content.
 5. Review projected PF, NPS, and combined portfolio totals.
 6. Click **Download local XLS** or **Save current data to Google Sheets**.
@@ -40,7 +40,7 @@ The Excel workbook includes a `PF Projection` sheet with:
 - Projected PF balance.
 - Optional validation recommendation.
 
-## Save to Google Sheets / Google Drive
+## Google Login and Sheets / Drive sync
 
 The app can save PF/NPS data into a Google Sheet in your Drive in two ways:
 
@@ -48,6 +48,7 @@ The app can save PF/NPS data into a Google Sheet in your Drive in two ways:
 2. A Google Apps Script bridge that you own.
 
 Direct OAuth writes to the Google Drive account you sign into. If Spreadsheet ID is blank, the app creates a new Google Sheet in that account.
+Open the **Google Login** menu in the top-right corner to enter the OAuth Client ID, Spreadsheet ID, and auto-save setting.
 
 ### Option 1: Direct Google OAuth
 
