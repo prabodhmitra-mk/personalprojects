@@ -552,6 +552,7 @@ function numberForDisplay(value) {
 function formatNpsSource(value) {
   return {
     "labelled-total": "Clear NPS total label",
+    "investment-summary": "NPS investment summary",
     "holding-sum": "Sum of detected NPS holdings",
     "not-found": "Not found"
   }[value] || value;
