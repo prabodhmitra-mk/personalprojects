@@ -2,20 +2,28 @@ import { formatCurrency } from "./epfoParser.js";
 
 const TOTAL_LABELS = [
   /total\s+(?:nps\s+)?(?:corpus|holding|value|valuation|balance|amount)/i,
+  /total\s+corpus/i,
+  /total\s+valuation/i,
+  /total\s+value\s+of\s+holdings/i,
   /current\s+(?:value|valuation|balance|corpus)/i,
+  /closing\s+(?:balance|value|corpus)/i,
   /market\s+value/i,
   /valuation\s+amount/i,
-  /account\s+balance/i
+  /account\s+balance/i,
+  /grand\s+total/i
 ];
 
 const CONTRIBUTION_LABELS = [
   /total\s+contribution/i,
+  /contribution\s+received/i,
   /contribution\s+amount/i,
-  /amount\s+contributed/i
+  /amount\s+contributed/i,
+  /subscriber\s+contribution/i
 ];
 
 const TIER_PATTERN = /\btier\s*-?\s*(?:i|ii|1|2)\b/i;
 const PRAN_PATTERN = /\b\d{12}\b/;
+const HOLDING_HEADER_PATTERN = /\b(?:scheme|pfm|pension\s+fund|units?|nav|current\s+value|valuation|corpus)\b/i;
 
 export function parseNpsInput(rawInput) {
   const text = normalizeNpsInput(rawInput);
@@ -126,17 +134,50 @@ function findLabelledAmount(lines, labels) {
 }
 
 function findHoldings(lines) {
-  return lines
-    .map(parseHoldingLine)
-    .filter(Boolean);
+  const holdings = [];
+  const seen = new Set();
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const candidates = [
+      lines[index],
+      `${lines[index]} ${lines[index + 1] || ""}`,
+      `${lines[index]} ${lines[index + 1] || ""} ${lines[index + 2] || ""}`
+    ];
+
+    for (const candidate of candidates) {
+      const holding = parseHoldingLine(candidate);
+      if (!holding) {
+        continue;
+      }
+
+      const key = `${holding.units}|${holding.nav}|${holding.value}`;
+      if (seen.has(key)) {
+        continue;
+      }
+
+      seen.add(key);
+      holdings.push(holding);
+      break;
+    }
+  }
+
+  return holdings;
 }
 
 function parseHoldingLine(line) {
-  const hasSchemeSignal = /\b(?:scheme|asset\s+class|equity|corporate|bond|government|securities|alternate|e\s*-?\s*tier|c\s*-?\s*tier|g\s*-?\s*tier|a\s*-?\s*tier)\b/i.test(line);
+  if (/^\s*(?:tier\s+\w+\s+)?(?:scheme|pfm|pension\s+fund).*\bunits?\b.*\bnav\b/i.test(line)) {
+    return null;
+  }
+
+  const hasSchemeSignal = /\b(?:scheme|asset\s+class|equity|corporate|bond|government|securities|alternate|pension\s+fund|pfm|sbi|uti|lic|hdfc|icici|kotak|axis|tata|aditya|max|e\s*[-–]?\s*tier|c\s*[-–]?\s*tier|g\s*[-–]?\s*tier|a\s*[-–]?\s*tier)\b/i.test(line);
   const hasUnitsOrNav = /\b(?:units?|nav|value|amount|corpus)\b/i.test(line);
   const amounts = extractAmounts(line);
 
-  if (!hasSchemeSignal || (amounts.length < 3 && !hasUnitsOrNav) || TOTAL_LABELS.some((pattern) => pattern.test(line))) {
+  if (HOLDING_HEADER_PATTERN.test(line) && amounts.length < 2) {
+    return null;
+  }
+
+  if (!hasSchemeSignal || (amounts.length < 3 && !hasUnitsOrNav) || isTotalLine(line)) {
     return null;
   }
 
@@ -163,7 +204,7 @@ function parseHoldingLine(line) {
 function sanitizeSchemeName(line) {
   const scheme = line
     .replace(/(?:rs\.?|inr|₹)?\s*[-+]?\d[\d,]*(?:\.\d+)?/gi, " ")
-    .replace(/\b(?:units?|nav|value|amount|corpus|current|balance|total)\b/gi, " ")
+    .replace(/\b(?:units?|nav|value|amount|corpus|current|balance|total|valuation)\b/gi, " ")
     .replace(/\s+/g, " ")
     .trim();
 
@@ -196,8 +237,50 @@ function findPran(lines) {
 function extractAmounts(value) {
   const amountPattern = /(?<![A-Za-z0-9])(?:rs\.?|inr|₹)?\s*[-+]?\d[\d,]*(?:\.\d{1,4})?/gi;
   return [...value.matchAll(amountPattern)]
+    .filter((match) => !isDatePart(value, match))
     .map((match) => Number.parseFloat(match[0].replace(/(?:rs\.?|inr|₹)/gi, "").replace(/,/g, "").trim()))
     .filter((amount) => Number.isFinite(amount));
+}
+
+function isTotalLine(line) {
+  return TOTAL_LABELS.some((pattern) => pattern.test(line))
+    || CONTRIBUTION_LABELS.some((pattern) => pattern.test(line))
+    || /\b(?:subtotal|sub-total)\b/i.test(line);
+}
+
+function isDatePart(value, match) {
+  const token = match[0].trim();
+  const hasCurrencyPrefix = /^(?:rs\.?|inr|₹)/i.test(token);
+  if (hasCurrencyPrefix) {
+    return false;
+  }
+
+  const start = match.index || 0;
+  const end = start + match[0].length;
+  const previousCharacter = value[start - 1] || "";
+  const nextCharacter = value[end] || "";
+  const digits = token.replace(/[^\d]/g, "");
+  const numericValue = Number.parseInt(digits, 10);
+
+  if ((previousCharacter === "/" || previousCharacter === "-" || previousCharacter === ".") && numericValue >= 1900 && numericValue <= 2099) {
+    return true;
+  }
+
+  if (nextCharacter === "/" || nextCharacter === "-" || nextCharacter === ".") {
+    return true;
+  }
+
+  if (digits.length === 8) {
+    const day = Number.parseInt(digits.slice(0, 2), 10);
+    const month = Number.parseInt(digits.slice(2, 4), 10);
+    const year = Number.parseInt(digits.slice(4), 10);
+
+    if (day >= 1 && day <= 31 && month >= 1 && month <= 12 && year >= 1900 && year <= 2099) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 function roundMoney(value) {

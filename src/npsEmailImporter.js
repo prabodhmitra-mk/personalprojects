@@ -271,7 +271,7 @@ async function extractPdfText(buffer, password) {
     for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
       const page = await pdf.getPage(pageNumber);
       const content = await page.getTextContent();
-      pages.push(content.items.map((item) => item.str || "").join(" "));
+      pages.push(extractTextRows(content.items));
     }
 
     return pages.join("\n");
@@ -282,6 +282,33 @@ async function extractPdfText(buffer, password) {
       await loadingTask.destroy();
     }
   }
+}
+
+function extractTextRows(items) {
+  const rows = new Map();
+
+  for (const item of items) {
+    const text = String(item.str || "").trim();
+    if (!text) {
+      continue;
+    }
+
+    const transform = item.transform || [];
+    const x = Number(transform[4] || 0);
+    const y = Math.round(Number(transform[5] || 0) * 2) / 2;
+    const row = rows.get(y) || [];
+
+    row.push({ x, text });
+    rows.set(y, row);
+  }
+
+  return [...rows.entries()]
+    .sort((left, right) => right[0] - left[0])
+    .map(([, row]) => row
+      .sort((left, right) => left.x - right.x)
+      .map((item) => item.text)
+      .join(" "))
+    .join("\n");
 }
 
 function formatAttachmentError(error) {
