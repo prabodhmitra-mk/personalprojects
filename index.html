@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>EPFO Balance Dashboard</title>
     <link rel="stylesheet" href="./styles.css">
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script type="module" src="./src/app.js"></script>
   </head>
   <body>
@@ -59,12 +60,16 @@
           <span class="step">2</span>
           <h2>Google Sheets / Drive storage</h2>
           <p>
-            Deploy the included Google Apps Script in your Google account, paste its Web App URL here, and save
-            PF/NPS data into a Google Sheet in your Drive.
+            Save PF/NPS data into a Google Sheet in your Drive. You can either sign in directly with Google OAuth
+            or use the included Apps Script bridge.
           </p>
           <div class="settings-grid">
             <label class="wide-field">
-              <span>Apps Script Web App URL</span>
+              <span>OAuth Web Client ID</span>
+              <input id="google-oauth-client-id" type="text" spellcheck="false" placeholder="1234567890-abc.apps.googleusercontent.com">
+            </label>
+            <label class="wide-field">
+              <span>Apps Script Web App URL, optional alternative</span>
               <input id="google-script-url" type="url" spellcheck="false" placeholder="https://script.google.com/macros/s/.../exec">
             </label>
             <label>
@@ -77,9 +82,10 @@
             </label>
           </div>
           <div class="actions">
-            <button id="save-google-sheets" class="primary" type="button">Save current data to Google Sheets</button>
+            <button id="save-google-oauth" class="primary" type="button">Sign in and save to Google Sheets</button>
+            <button id="save-google-sheets" type="button">Save through Apps Script</button>
           </div>
-          <p id="google-sheets-status" class="status">Google Sheets storage is optional.</p>
+          <p id="google-sheets-status" class="status">Google Sheets storage is optional. Direct OAuth creates/updates a Sheet in the signed-in Google account.</p>
         </article>
 
         <article class="panel">

@@ -38,9 +38,11 @@ const savePfProjectionButton = document.querySelector("#save-pf-projection");
 const validatePfProjectionButton = document.querySelector("#validate-pf-projection");
 const clearPfProjectionButton = document.querySelector("#clear-pf-projection");
 const pfProjectionStatus = document.querySelector("#pf-projection-status");
+const googleOauthClientId = document.querySelector("#google-oauth-client-id");
 const googleScriptUrl = document.querySelector("#google-script-url");
 const googleSpreadsheetId = document.querySelector("#google-spreadsheet-id");
 const googleAutosave = document.querySelector("#google-autosave");
+const saveGoogleOauthButton = document.querySelector("#save-google-oauth");
 const saveGoogleSheetsButton = document.querySelector("#save-google-sheets");
 const googleSheetsStatus = document.querySelector("#google-sheets-status");
 const dashboard = document.querySelector("#dashboard");
@@ -59,6 +61,8 @@ const lastPfResult = null;
 let lastNpsResult = null;
 let pfProjectionBaseline = loadPfProjectionBaseline();
 let pfProjection = calculatePfProjection(pfProjectionBaseline);
+let googleAccessToken = null;
+let googleTokenClient = null;
 
 openNpsPortalButton.addEventListener("click", () => {
   window.open(NPS_PORTAL_URL, "_blank", "noopener,noreferrer");
@@ -80,6 +84,7 @@ parseNpsButton.addEventListener("click", parseNpsAndRender);
 importNpsEmailButton.addEventListener("click", importNpsFromEmail);
 savePfProjectionButton.addEventListener("click", savePfProjectionBaseline);
 clearPfProjectionButton.addEventListener("click", clearPfProjectionBaseline);
+saveGoogleOauthButton.addEventListener("click", () => saveToGoogleSheetsWithOAuth({ reason: "Manual Google OAuth save" }));
 saveGoogleSheetsButton.addEventListener("click", () => saveToGoogleSheets({ openResult: true, reason: "Manual Google Sheets save" }));
 validatePfProjectionButton.addEventListener("click", () => {
   window.open(EPFO_PASSBOOK_URL, "_blank", "noopener,noreferrer");
@@ -270,6 +275,7 @@ function restoreGoogleSheetsSettings() {
     }
 
     const settings = JSON.parse(raw);
+    googleOauthClientId.value = settings.oauthClientId || "";
     googleScriptUrl.value = settings.scriptUrl || "";
     googleSpreadsheetId.value = settings.spreadsheetId || "";
     googleAutosave.checked = settings.autosave !== false;
@@ -280,6 +286,7 @@ function restoreGoogleSheetsSettings() {
 
 function saveGoogleSheetsSettings() {
   localStorage.setItem(GOOGLE_SHEETS_SETTINGS_KEY, JSON.stringify({
+    oauthClientId: googleOauthClientId.value.trim(),
     scriptUrl: googleScriptUrl.value.trim(),
     spreadsheetId: googleSpreadsheetId.value.trim(),
     autosave: googleAutosave.checked
@@ -289,16 +296,231 @@ function saveGoogleSheetsSettings() {
 function autoSaveToGoogleSheets(reason) {
   saveGoogleSheetsSettings();
 
-  if (!googleAutosave.checked || !googleScriptUrl.value.trim()) {
+  if (!googleAutosave.checked) {
     return;
   }
 
   if (!googleSpreadsheetId.value.trim()) {
-    setGoogleSheetsStatus("Google Sheets auto-save needs a Spreadsheet ID. Click Save current data to Google Sheets once to create a sheet, then copy its ID here.");
+    setGoogleSheetsStatus("Google Sheets auto-save needs a Spreadsheet ID. Use Sign in and save to Google Sheets once to create a sheet, then keep its ID here.");
+    return;
+  }
+
+  if (googleOauthClientId.value.trim() && googleAccessToken) {
+    saveToGoogleSheetsWithOAuth({ reason, interactive: false });
+    return;
+  }
+
+  if (!googleScriptUrl.value.trim()) {
     return;
   }
 
   saveToGoogleSheets({ openResult: false, reason });
+}
+
+async function saveToGoogleSheetsWithOAuth({ reason, interactive = true }) {
+  saveGoogleSheetsSettings();
+
+  if (!pfProjection && !lastNpsResult) {
+    setGoogleSheetsStatus("Save PF projection data or import NPS data before saving to Google Sheets.");
+    return;
+  }
+
+  try {
+    saveGoogleOauthButton.disabled = true;
+    const token = await getGoogleAccessToken({ interactive });
+    if (!token) {
+      return;
+    }
+
+    const payload = buildPortfolioExportPayload({
+      spreadsheetId: googleSpreadsheetId.value.trim(),
+      pfProjection,
+      npsResult: lastNpsResult,
+      updatedAt: new Date().toISOString()
+    });
+    const result = await writePortfolioToGoogleSheet(payload, token);
+
+    googleSpreadsheetId.value = result.spreadsheetId;
+    saveGoogleSheetsSettings();
+    setGoogleSheetsStatus(`Saved to Google Sheets (${reason}). Spreadsheet ID: ${result.spreadsheetId}.`);
+
+    if (interactive && result.spreadsheetUrl) {
+      window.open(result.spreadsheetUrl, "_blank", "noopener,noreferrer");
+    }
+  } catch (error) {
+    setGoogleSheetsStatus(`Google OAuth save failed: ${error.message}`);
+  } finally {
+    saveGoogleOauthButton.disabled = false;
+  }
+}
+
+function getGoogleAccessToken({ interactive }) {
+  return new Promise((resolve, reject) => {
+    if (googleAccessToken) {
+      resolve(googleAccessToken);
+      return;
+    }
+
+    const clientId = googleOauthClientId.value.trim();
+    if (!clientId) {
+      setGoogleSheetsStatus("Paste your Google OAuth Web Client ID before using direct Google sign-in.");
+      resolve(null);
+      return;
+    }
+
+    if (!window.google?.accounts?.oauth2) {
+      reject(new Error("Google Identity Services did not load. Check your internet connection and reload the page."));
+      return;
+    }
+
+    googleTokenClient = window.google.accounts.oauth2.initTokenClient({
+      client_id: clientId,
+      scope: "https://www.googleapis.com/auth/spreadsheets",
+      callback: (response) => {
+        if (response.error) {
+          reject(new Error(response.error_description || response.error));
+          return;
+        }
+
+        googleAccessToken = response.access_token;
+        resolve(googleAccessToken);
+      }
+    });
+
+    googleTokenClient.requestAccessToken({
+      prompt: interactive ? "consent" : ""
+    });
+  });
+}
+
+async function writePortfolioToGoogleSheet(payload, token) {
+  let spreadsheetId = payload.spreadsheetId;
+  let spreadsheetUrl = "";
+
+  if (!spreadsheetId) {
+    const created = await googleApiFetch("https://sheets.googleapis.com/v4/spreadsheets", token, {
+      method: "POST",
+      body: JSON.stringify({
+        properties: {
+          title: payload.spreadsheetName || "PF NPS Portfolio Tracker"
+        },
+        sheets: [
+          { properties: { title: "Summary" } },
+          { properties: { title: "PF Projection" } },
+          { properties: { title: "NPS Summary" } },
+          { properties: { title: "NPS Holdings" } },
+          { properties: { title: "Update History" } }
+        ]
+      })
+    });
+    spreadsheetId = created.spreadsheetId;
+    spreadsheetUrl = created.spreadsheetUrl || `https://docs.google.com/spreadsheets/d/${spreadsheetId}`;
+  }
+
+  const existing = await googleApiFetch(
+    `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(spreadsheetId)}?fields=sheets.properties.title,spreadsheetUrl`,
+    token
+  );
+  spreadsheetUrl = spreadsheetUrl || existing.spreadsheetUrl || `https://docs.google.com/spreadsheets/d/${spreadsheetId}`;
+  const existingTitles = new Set((existing.sheets || []).map((sheet) => sheet.properties.title));
+  const requiredTitles = ["Summary", "PF Projection", "NPS Summary", "NPS Holdings", "Update History"];
+  const missingTitles = requiredTitles.filter((title) => !existingTitles.has(title));
+
+  if (missingTitles.length > 0) {
+    await googleApiFetch(`https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(spreadsheetId)}:batchUpdate`, token, {
+      method: "POST",
+      body: JSON.stringify({
+        requests: missingTitles.map((title) => ({
+          addSheet: {
+            properties: { title }
+          }
+        }))
+      })
+    });
+  }
+
+  await replaceSheetValues(spreadsheetId, "Summary", payload.summaryRows, token);
+  await replaceSheetValues(spreadsheetId, "PF Projection", payload.pfProjectionRows, token);
+  await replaceSheetValues(spreadsheetId, "NPS Summary", payload.npsSummaryRows, token);
+  await replaceSheetValues(spreadsheetId, "NPS Holdings", payload.npsHoldingsRows, token);
+
+  if (missingTitles.includes("Update History")) {
+    await replaceSheetValues(spreadsheetId, "Update History", [[
+      "Updated At",
+      "PF Value",
+      "NPS Value",
+      "Combined Value",
+      "PF Source",
+      "NPS Source"
+    ]], token);
+  }
+
+  await appendSheetValues(spreadsheetId, "Update History", [payload.historyRow], token);
+
+  return {
+    spreadsheetId,
+    spreadsheetUrl
+  };
+}
+
+async function replaceSheetValues(spreadsheetId, sheetName, rows, token) {
+  const clearRange = encodeURIComponent(`${quoteSheetName(sheetName)}!A:Z`);
+  const updateRange = encodeURIComponent(`${quoteSheetName(sheetName)}!A1`);
+
+  await googleApiFetch(
+    `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(spreadsheetId)}/values/${clearRange}:clear`,
+    token,
+    { method: "POST" }
+  );
+  await googleApiFetch(
+    `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(spreadsheetId)}/values/${updateRange}?valueInputOption=USER_ENTERED`,
+    token,
+    {
+      method: "PUT",
+      body: JSON.stringify({
+        values: rows
+      })
+    }
+  );
+}
+
+async function appendSheetValues(spreadsheetId, sheetName, rows, token) {
+  const appendRange = encodeURIComponent(`${quoteSheetName(sheetName)}!A1`);
+
+  await googleApiFetch(
+    `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(spreadsheetId)}/values/${appendRange}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`,
+    token,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        values: rows
+      })
+    }
+  );
+}
+
+function quoteSheetName(sheetName) {
+  return `'${String(sheetName).replace(/'/g, "''")}'`;
+}
+
+async function googleApiFetch(url, token, options = {}) {
+  const response = await fetch(url, {
+    method: options.method || "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+      ...(options.headers || {})
+    },
+    body: options.body
+  });
+  const text = await response.text();
+  const payload = text ? JSON.parse(text) : {};
+
+  if (!response.ok) {
+    throw new Error(payload.error?.message || response.statusText);
+  }
+
+  return payload;
 }
 
 function saveToGoogleSheets({ openResult, reason }) {

@@ -42,10 +42,47 @@ The Excel workbook includes a `PF Projection` sheet with:
 
 ## Save to Google Sheets / Google Drive
 
-The app can save PF/NPS data into a Google Sheet in your Drive through a Google Apps Script that you own.
-This avoids shipping Google OAuth credentials inside the local app.
+The app can save PF/NPS data into a Google Sheet in your Drive in two ways:
 
-### One-time setup
+1. Direct Google OAuth from the browser.
+2. A Google Apps Script bridge that you own.
+
+Direct OAuth writes to the Google Drive account you sign into. If Spreadsheet ID is blank, the app creates a new Google Sheet in that account.
+
+### Option 1: Direct Google OAuth
+
+One-time Google Cloud setup:
+
+1. Open Google Cloud Console:
+
+   ```text
+   https://console.cloud.google.com
+   ```
+
+2. Create or select a project.
+3. Enable **Google Sheets API**.
+4. Configure the OAuth consent screen.
+5. Create credentials:
+   - Type: **OAuth client ID**
+   - Application type: **Web application**
+6. Add this Authorized JavaScript origin:
+
+   ```text
+   http://localhost:5173
+   ```
+
+7. Copy the OAuth Client ID.
+8. Paste it into **OAuth Web Client ID** in the app.
+9. Click **Sign in and save to Google Sheets**.
+
+If **Spreadsheet ID** is blank, the app creates a new spreadsheet in the signed-in Google account.
+The returned/opened Google Sheet ID is saved in the app so future saves update the same sheet.
+
+### Option 2: Google Apps Script bridge
+
+This avoids putting OAuth implementation details in the app and uses a script deployed by you.
+
+One-time setup:
 
 1. Open Google Apps Script:
 
