@@ -262,22 +262,35 @@ async function extractPdfText(buffer, password) {
     isEvalSupported: false,
     disableFontFace: true
   });
-  const pdf = await loadingTask.promise;
-  const pages = [];
+  let pdf = null;
 
-  for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
-    const page = await pdf.getPage(pageNumber);
-    const content = await page.getTextContent();
-    pages.push(content.items.map((item) => item.str || "").join(" "));
+  try {
+    pdf = await loadingTask.promise;
+    const pages = [];
+
+    for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
+      const page = await pdf.getPage(pageNumber);
+      const content = await page.getTextContent();
+      pages.push(content.items.map((item) => item.str || "").join(" "));
+    }
+
+    return pages.join("\n");
+  } finally {
+    if (pdf && typeof pdf.destroy === "function") {
+      await pdf.destroy();
+    } else if (typeof loadingTask.destroy === "function") {
+      await loadingTask.destroy();
+    }
   }
-
-  await pdf.destroy();
-  return pages.join("\n");
 }
 
 function formatAttachmentError(error) {
   if (/password/i.test(error.message || "") || error.name === "PasswordException") {
     return "Could not open PDF attachment. Check the NPS statement password.";
+  }
+
+  if (/destroy is not a function/i.test(error.message || "")) {
+    return "PDF text was read but cleanup failed because of a PDF library API mismatch. Update to the latest app code and retry.";
   }
 
   return error.message || "Could not parse attachment.";
