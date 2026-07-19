@@ -1,17 +1,28 @@
 # Wealth Management Dashboard
 
-A small privacy-first wealth dashboard that helps you project PF value, import NPS holdings/statement data, and sync/export a combined PF/NPS workbook.
+A small privacy-first wealth dashboard that helps you store PF/NPS data in a local file on your laptop and export a combined PF/NPS workbook.
 
 ## How it works
 
 1. Start the app locally.
-2. Enter a manual PF projection baseline: current PF balance plus last month employee/employer contribution.
-3. Use **Google Login** in the top-right corner to configure optional Google Sheets/Drive sync.
+2. Create or open a local wealth file on your laptop.
+3. Enter a manual PF projection baseline: current PF balance plus last month employee/employer contribution.
 4. Import NPS from email attachments or manually import copied/downloaded NPS holdings or statement content.
 5. Review projected PF, NPS, and combined portfolio totals.
-6. Click **Download local XLS** or **Save current data to Google Sheets**.
+6. Click **Download local XLS** if you want an Excel copy.
 
-The app does not store your EPFO, NPS, or email credentials. Imported NPS content is processed locally.
+The app does not store your EPFO, NPS, or email credentials. Wealth data is saved in the local file you select.
+
+## Local wealth file
+
+Use the **Local wealth file** section first:
+
+1. Click **Create wealth file** to choose where to save your dashboard data, or **Open existing wealth file**.
+2. The app stores PF and NPS data in that JSON file.
+3. On future opens, the app tries to read the same file automatically if the browser still has permission.
+4. If permission is not available, click **Open existing wealth file** again.
+
+Use Chrome or Edge for this feature because it relies on the browser's local file access API.
 
 ## Manual PF projection baseline
 
@@ -28,9 +39,13 @@ The app saves this baseline in browser local storage and, on future app opens, e
 saved PF balance + completed months since save date * (employee contribution + employer contribution)
 ```
 
+The app only adds PF deposits when one or more full months have elapsed. If fewer than one full month has passed, it does not add anything.
+
 This is only an estimate. Validation is optional but recommended: click **Optional: validate in EPFO** to open EPFO manually and compare against the official current balance.
 
-The Excel workbook includes a `PF Projection` sheet with:
+If the estimate looks right, click **Accept estimate and save**. That writes the estimated PF value back to your local wealth file.
+
+The local wealth file and Excel workbook include:
 
 - Saved current balance.
 - Last month employee contribution.
@@ -39,95 +54,6 @@ The Excel workbook includes a `PF Projection` sheet with:
 - Completed months elapsed.
 - Projected PF balance.
 - Optional validation recommendation.
-
-## Google Login and Sheets / Drive sync
-
-The app can save PF/NPS data into a Google Sheet in your Drive in two ways:
-
-1. Direct Google OAuth from the browser.
-2. A Google Apps Script bridge that you own.
-
-Direct OAuth writes to the Google Drive account you sign into. If Spreadsheet ID is blank, the app creates a new Google Sheet in that account.
-Open the **Google Login** menu in the top-right corner to enter the OAuth Client ID, Spreadsheet ID, and auto-save setting.
-
-### Option 1: Direct Google OAuth
-
-Think of the OAuth Client ID as a safe "door key" that lets this local dashboard ask Google for permission to update your own Sheet.
-You create that key once in your Google account, paste it into the dashboard, and then use **Google Login**.
-
-One-time Google Cloud setup:
-
-1. Open Google Cloud Console:
-
-   ```text
-   https://console.cloud.google.com
-   ```
-
-2. Create or select a project.
-3. Enable **Google Sheets API**.
-4. Configure the OAuth consent screen. For personal use, it is fine to keep the app in testing and add your own Google email as a test user.
-5. Create credentials:
-   - Type: **OAuth client ID**
-   - Application type: **Web application**
-6. Add this Authorized JavaScript origin:
-
-   ```text
-   http://localhost:5173
-   ```
-
-7. Copy the OAuth Client ID.
-8. In this dashboard, click **Google Login** in the top-right corner.
-9. Paste it into **OAuth Web Client ID**.
-10. Click **Sign in and save**.
-
-If **Spreadsheet ID** is blank, the app creates a new spreadsheet in the signed-in Google account.
-The returned/opened Google Sheet ID is saved in the app so future saves update the same sheet.
-
-### Option 2: Google Apps Script bridge
-
-This avoids putting OAuth implementation details in the app and uses a script deployed by you.
-
-One-time setup:
-
-1. Open Google Apps Script:
-
-   ```text
-   https://script.google.com
-   ```
-
-2. Create a new project.
-3. Copy the contents of:
-
-   ```text
-   google-apps-script/Code.gs
-   ```
-
-   into the Apps Script editor.
-
-4. Deploy it as a Web App:
-   - Execute as: **Me**
-   - Who has access: **Only myself**
-
-5. Copy the Web App URL.
-6. Paste it into **Apps Script Web App URL** in this app.
-7. Click **Save current data to Google Sheets**.
-
-If **Spreadsheet ID** is blank, the script creates a new Google Sheet and opens a result page with the new Spreadsheet ID.
-Copy that ID back into this app so future saves update the same sheet.
-
-### Google Sheet tabs
-
-The Google Sheet contains:
-
-- `Summary`
-- `PF Projection`
-- `NPS Summary`
-- `NPS Holdings`
-- `Update History`
-
-The `Update History` tab appends a new row each time data is saved, including last updated time, PF value, NPS value, and combined value.
-
-If **Auto-save after PF/NPS updates** is checked and a Spreadsheet ID is set, the app submits updates after saving PF projection data or parsing NPS data.
 
 ## Import NPS data
 
@@ -248,7 +174,6 @@ The generated `.xls` workbook is created locally in the browser from the parsed 
 It contains separate sheets for:
 
 - `Summary`
-- `PF Summary`
 - `PF Projection`
 - `NPS Summary`
 - `NPS Holdings`

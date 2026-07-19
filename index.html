@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Wealth Management Dashboard</title>
     <link rel="stylesheet" href="./styles.css">
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script type="module" src="./src/app.js"></script>
   </head>
   <body>
@@ -15,62 +14,6 @@
           <p class="eyebrow">Wealth Management Dashboard</p>
           <strong>PF + NPS Tracker</strong>
         </div>
-        <div class="login-area">
-          <button id="google-login-toggle" class="primary" type="button">Google Login</button>
-          <section id="google-login-popover" class="login-popover" hidden>
-            <div class="popover-header">
-              <div>
-                <p class="eyebrow">Google Sheets</p>
-                <h2>Save to your Drive</h2>
-              </div>
-              <button id="google-login-close" type="button" aria-label="Close Google login">Close</button>
-            </div>
-            <p class="hint">
-              This connects the dashboard to your own Google account and creates/updates a Google Sheet in your Drive.
-              Google requires a one-time Client ID before a local app can show the sign-in screen.
-            </p>
-            <details class="help-box" open>
-              <summary>Simple setup help</summary>
-              <ol>
-                <li>Open <a href="https://console.cloud.google.com" target="_blank" rel="noreferrer">Google Cloud Console</a>.</li>
-                <li>Create/select a project, then search for and enable <strong>Google Sheets API</strong>.</li>
-                <li>Open <strong>APIs & Services -> OAuth consent screen</strong> and complete the basic app details.</li>
-                <li>Open <strong>Credentials -> Create credentials -> OAuth client ID</strong>.</li>
-                <li>Choose <strong>Web application</strong>.</li>
-                <li>Add this under <strong>Authorized JavaScript origins</strong>: <code>http://localhost:5173</code>.</li>
-                <li>Copy the generated <strong>Client ID</strong> and paste it below.</li>
-                <li>Click <strong>Sign in and save</strong>. Google will ask which account to use.</li>
-              </ol>
-              <p>
-                Leave Spreadsheet ID blank the first time. A new Google Sheet will be created in your Drive; copy its
-                ID back here if you want future saves to update the same file.
-              </p>
-            </details>
-            <div class="settings-grid compact-settings">
-              <label class="wide-field">
-                <span>OAuth Web Client ID</span>
-                <input id="google-oauth-client-id" type="text" spellcheck="false" placeholder="1234567890-abc.apps.googleusercontent.com">
-              </label>
-              <label>
-                <span>Spreadsheet ID</span>
-                <input id="google-spreadsheet-id" type="text" spellcheck="false" placeholder="Blank creates a new sheet">
-              </label>
-              <label class="checkbox-field">
-                <input id="google-autosave" type="checkbox" checked>
-                <span>Auto-save after PF/NPS updates when Spreadsheet ID is set</span>
-              </label>
-              <label class="wide-field">
-                <span>Advanced fallback: Apps Script Web App URL</span>
-                <input id="google-script-url" type="url" spellcheck="false" placeholder="https://script.google.com/macros/s/.../exec">
-              </label>
-            </div>
-            <div class="actions">
-              <button id="save-google-oauth" class="primary" type="button">Sign in and save</button>
-              <button id="save-google-sheets" type="button">Save through Apps Script</button>
-            </div>
-            <p id="google-sheets-status" class="status">Not connected. Google settings are stored only in this browser.</p>
-          </section>
-        </div>
       </header>
 
       <section class="hero">
@@ -78,19 +21,36 @@
           <p class="eyebrow">Local portfolio view</p>
           <h1>Track PF projection and NPS value in one place</h1>
           <p class="hero-copy">
-            Save a manual PF projection baseline, import NPS statements, and sync a summary workbook to Google Sheets or local Excel.
+            Select a local wealth file, keep PF/NPS data on your laptop, and export a summary workbook when needed.
           </p>
         </div>
         <div class="hero-card">
           <span class="badge">Privacy-first</span>
           <strong>No credential storage</strong>
-          <p>Projection data stays in browser local storage. Email credentials are used only for a local NPS import request.</p>
+          <p>Your wealth data is stored in the local file you choose. Email credentials are used only for a local NPS import request.</p>
         </div>
       </section>
 
       <section class="grid">
         <article class="panel">
           <span class="step">1</span>
+          <h2>Local wealth file</h2>
+          <p>
+            Create or open a local JSON file on your laptop. The app reads this file on startup when browser permission
+            is available and updates PF estimates only after a full month has elapsed.
+          </p>
+          <div class="actions">
+            <button id="create-wealth-file" class="primary" type="button">Create wealth file</button>
+            <button id="open-wealth-file" type="button">Open existing wealth file</button>
+            <button id="save-wealth-file" type="button" disabled>Save wealth file</button>
+            <button id="accept-pf-estimate" type="button" disabled>Accept estimate and save</button>
+          </div>
+          <p class="hint">Use Chrome or Edge for local file access. If less than one full month has passed, PF value is not increased.</p>
+          <p id="wealth-file-status" class="status">No local wealth file selected.</p>
+        </article>
+
+        <article class="panel">
+          <span class="step">2</span>
           <h2>Manual PF projection baseline</h2>
           <p>
             Enter your current EPFO balance and last month employee/employer contributions. The app saves this locally
@@ -120,7 +80,7 @@
         </article>
 
         <article class="panel">
-          <span class="step">2</span>
+          <span class="step">3</span>
           <h2>Import NPS statement from email</h2>
           <p>
             The local server can read recent emails where the subject contains <strong>nps</strong> and
@@ -170,7 +130,7 @@
         </article>
 
         <article class="panel">
-          <span class="step">3</span>
+          <span class="step">4</span>
           <h2>Import NPS holdings/statement manually</h2>
           <p>
             You can still open the official NPS CRA portal, log in yourself, then copy or export your holdings/statement text here.

@@ -1,18 +1,26 @@
 import { formatCurrency } from "./epfoParser.js";
 import { parseNpsInput } from "./npsParser.js";
 import {
-  PF_PROJECTION_STORAGE_KEY,
-  calculatePfProjection,
-  createPfProjectionBaseline
-} from "./pfProjection.js";
-import {
-  GOOGLE_SHEETS_SETTINGS_KEY,
-  buildPortfolioExportPayload
-} from "./portfolioExport.js";
+  applyPfMonthlyEstimate,
+  buildNpsRecord,
+  buildPfRecord,
+  clearStoredWealthFileHandle,
+  createEmptyWealthData,
+  createPfProjectionView,
+  getStoredWealthFileHandle,
+  normalizeWealthData,
+  storeWealthFileHandle,
+  verifyPermission
+} from "./wealthFile.js";
 
 const EPFO_PASSBOOK_URL = "https://passbook.epfindia.gov.in/MemberPassBook/Login";
 const NPS_PORTAL_URL = "https://cra-nsdl.com/CRA/";
 
+const createWealthFileButton = document.querySelector("#create-wealth-file");
+const openWealthFileButton = document.querySelector("#open-wealth-file");
+const saveWealthFileButton = document.querySelector("#save-wealth-file");
+const acceptPfEstimateButton = document.querySelector("#accept-pf-estimate");
+const wealthFileStatus = document.querySelector("#wealth-file-status");
 const openNpsPortalButton = document.querySelector("#open-nps-portal");
 const npsFileInput = document.querySelector("#nps-file");
 const npsInput = document.querySelector("#nps-input");
@@ -38,16 +46,6 @@ const savePfProjectionButton = document.querySelector("#save-pf-projection");
 const validatePfProjectionButton = document.querySelector("#validate-pf-projection");
 const clearPfProjectionButton = document.querySelector("#clear-pf-projection");
 const pfProjectionStatus = document.querySelector("#pf-projection-status");
-const googleLoginToggle = document.querySelector("#google-login-toggle");
-const googleLoginPopover = document.querySelector("#google-login-popover");
-const googleLoginClose = document.querySelector("#google-login-close");
-const googleOauthClientId = document.querySelector("#google-oauth-client-id");
-const googleScriptUrl = document.querySelector("#google-script-url");
-const googleSpreadsheetId = document.querySelector("#google-spreadsheet-id");
-const googleAutosave = document.querySelector("#google-autosave");
-const saveGoogleOauthButton = document.querySelector("#save-google-oauth");
-const saveGoogleSheetsButton = document.querySelector("#save-google-sheets");
-const googleSheetsStatus = document.querySelector("#google-sheets-status");
 const dashboard = document.querySelector("#dashboard");
 const portfolioTotal = document.querySelector("#portfolio-total");
 const pfProjectedBalance = document.querySelector("#pf-projected-balance");
@@ -60,12 +58,16 @@ const npsSource = document.querySelector("#nps-source");
 const npsHoldingList = document.querySelector("#nps-holding-list");
 const npsWarningList = document.querySelector("#nps-warning-list");
 
-const lastPfResult = null;
+let wealthFileHandle = null;
+let wealthData = createEmptyWealthData();
+let pendingPfEstimate = null;
+let pfProjection = null;
 let lastNpsResult = null;
-let pfProjectionBaseline = loadPfProjectionBaseline();
-let pfProjection = calculatePfProjection(pfProjectionBaseline);
-let googleAccessToken = null;
-let googleTokenClient = null;
+
+createWealthFileButton.addEventListener("click", createWealthFile);
+openWealthFileButton.addEventListener("click", openWealthFile);
+saveWealthFileButton.addEventListener("click", () => saveWealthFile("Saved current wealth data to the selected local file."));
+acceptPfEstimateButton.addEventListener("click", acceptPfEstimate);
 
 openNpsPortalButton.addEventListener("click", () => {
   window.open(NPS_PORTAL_URL, "_blank", "noopener,noreferrer");
@@ -87,26 +89,19 @@ parseNpsButton.addEventListener("click", parseNpsAndRender);
 importNpsEmailButton.addEventListener("click", importNpsFromEmail);
 savePfProjectionButton.addEventListener("click", savePfProjectionBaseline);
 clearPfProjectionButton.addEventListener("click", clearPfProjectionBaseline);
-googleLoginToggle.addEventListener("click", () => {
-  googleLoginPopover.hidden = !googleLoginPopover.hidden;
-});
-googleLoginClose.addEventListener("click", () => {
-  googleLoginPopover.hidden = true;
-});
-saveGoogleOauthButton.addEventListener("click", () => saveToGoogleSheetsWithOAuth({ reason: "Manual Google OAuth save" }));
-saveGoogleSheetsButton.addEventListener("click", () => saveToGoogleSheets({ openResult: true, reason: "Manual Google Sheets save" }));
 validatePfProjectionButton.addEventListener("click", () => {
   window.open(EPFO_PASSBOOK_URL, "_blank", "noopener,noreferrer");
-  setPfProjectionStatus("Opened EPFO. Optional but recommended: log in manually and compare the projected PF balance with the official current balance.");
+  setPfProjectionStatus("Opened EPFO. Optional but recommended: compare the estimate with the official balance. If it looks right, click Accept estimate and save.");
 });
 
 clearNpsButton.addEventListener("click", () => {
   npsInput.value = "";
   npsFileInput.value = "";
   lastNpsResult = null;
+  wealthData.nps = null;
   resetNpsView();
   refreshPortfolioSummary();
-  setNpsStatus("Cleared imported NPS content from this page.");
+  saveWealthFile("Cleared NPS data and saved the local wealth file.");
 });
 
 sampleNpsButton.addEventListener("click", () => {
@@ -123,82 +118,205 @@ Tier I Government Securities Scheme G 7,800.0000 49.50 3,86,000`;
 });
 
 downloadXlsButton.addEventListener("click", () => {
-  if (!lastPfResult && !lastNpsResult && !pfProjection) {
-    setPfProjectionStatus("Save a PF projection baseline or import NPS content before downloading an XLS file.");
+  if (!wealthData.pf && !lastNpsResult && !pfProjection) {
+    setPfProjectionStatus("Create/open a wealth file and save PF or NPS data before downloading an XLS file.");
     return;
   }
 
-  downloadWorkbook(lastPfResult, lastNpsResult, pfProjection);
+  downloadWorkbook(lastNpsResult, pfProjection);
 });
 
-restorePfProjectionUi();
-restoreGoogleSheetsSettings();
-refreshPortfolioSummary();
+initLocalWealthFile();
 
-function parseNpsAndRender() {
-  const result = parseNpsInput(npsInput.value);
-
-  if (result.totalValue === null) {
-    lastNpsResult = null;
-    resetNpsView();
-    refreshPortfolioSummary();
-    setNpsStatus(result.warnings[0] || "Could not detect an NPS value. Paste the full NPS holding/statement text and try again.");
+async function initLocalWealthFile() {
+  if (!supportsFileSystemAccess()) {
+    setWealthFileStatus("This browser cannot persist a chosen file location. Use latest Chrome or Edge for local wealth-file storage.");
     return;
   }
 
-  renderNpsResult(result, `Detected NPS value ${result.formattedTotalValue} from ${result.lineCount} imported lines. Review it against the NPS portal before relying on it.`);
+  try {
+    const handle = await getStoredWealthFileHandle();
+    if (!handle) {
+      setWealthFileStatus("Choose or create a local wealth file. The app will read that file on future opens when browser permission is available.");
+      hydrateFromWealthData();
+      return;
+    }
+
+    wealthFileHandle = handle;
+    const hasPermission = await verifyPermission(wealthFileHandle, "readwrite");
+    if (!hasPermission) {
+      setWealthFileStatus("A previous wealth file was found. Click Open existing wealth file and allow access to read it again.");
+      hydrateFromWealthData();
+      return;
+    }
+
+    await readWealthFile();
+  } catch (error) {
+    setWealthFileStatus(`Could not restore local wealth file: ${error.message}`);
+    hydrateFromWealthData();
+  }
+}
+
+async function createWealthFile() {
+  if (!supportsFileSystemAccess()) {
+    setWealthFileStatus("Local file selection is supported in Chrome/Edge. Please use one of those browsers.");
+    return;
+  }
+
+  try {
+    wealthFileHandle = await window.showSaveFilePicker({
+      suggestedName: "wealth-dashboard-data.json",
+      types: [
+        {
+          description: "Wealth dashboard data",
+          accept: {
+            "application/json": [".json"]
+          }
+        }
+      ]
+    });
+    await storeWealthFileHandle(wealthFileHandle);
+    wealthData = createEmptyWealthData();
+    pendingPfEstimate = null;
+    await writeWealthFile();
+    hydrateFromWealthData();
+    setWealthFileStatus("Created local wealth file. Future app opens will try to read this file automatically.");
+  } catch (error) {
+    if (error.name !== "AbortError") {
+      setWealthFileStatus(`Could not create local wealth file: ${error.message}`);
+    }
+  }
+}
+
+async function openWealthFile() {
+  if (!supportsFileSystemAccess()) {
+    setWealthFileStatus("Local file selection is supported in Chrome/Edge. Please use one of those browsers.");
+    return;
+  }
+
+  try {
+    const [handle] = await window.showOpenFilePicker({
+      types: [
+        {
+          description: "Wealth dashboard data",
+          accept: {
+            "application/json": [".json"]
+          }
+        }
+      ]
+    });
+    wealthFileHandle = handle;
+    await storeWealthFileHandle(wealthFileHandle);
+    await readWealthFile();
+  } catch (error) {
+    if (error.name !== "AbortError") {
+      setWealthFileStatus(`Could not open local wealth file: ${error.message}`);
+    }
+  }
+}
+
+async function readWealthFile() {
+  const file = await wealthFileHandle.getFile();
+  const text = await file.text();
+  const parsed = text.trim() ? JSON.parse(text) : createEmptyWealthData();
+  const result = applyPfMonthlyEstimate(normalizeWealthData(parsed), new Date());
+
+  wealthData = result.data;
+  pendingPfEstimate = result.estimate?.applied ? result.estimate : null;
+  hydrateFromWealthData(result.estimate);
+
+  if (pendingPfEstimate) {
+    setWealthFileStatus(`Read ${wealthFileHandle.name}. Estimated PF increased by ${formatCurrency(pendingPfEstimate.monthsElapsed * pendingPfEstimate.monthlyDeposit)} for ${pendingPfEstimate.monthsElapsed} completed month(s). Validate if desired, then click Accept estimate and save.`);
+  } else {
+    setWealthFileStatus(`Read ${wealthFileHandle.name}. No monthly PF estimate was added because less than one full month elapsed or no PF baseline exists.`);
+  }
+}
+
+async function saveWealthFile(successMessage) {
+  if (!wealthFileHandle) {
+    setWealthFileStatus("Select or create a local wealth file before saving.");
+    return false;
+  }
+
+  try {
+    await writeWealthFile();
+    setWealthFileStatus(successMessage);
+    return true;
+  } catch (error) {
+    setWealthFileStatus(`Could not save local wealth file: ${error.message}`);
+    return false;
+  }
+}
+
+async function writeWealthFile() {
+  wealthData.lastUpdatedAt = new Date().toISOString();
+  const writable = await wealthFileHandle.createWritable();
+  await writable.write(JSON.stringify(wealthData, null, 2));
+  await writable.close();
+}
+
+function acceptPfEstimate() {
+  if (!pendingPfEstimate) {
+    setWealthFileStatus("No pending PF estimate to accept. The stored PF value is already current for the selected file.");
+    return;
+  }
+
+  wealthData.pf = {
+    ...wealthData.pf,
+    lastAcceptedEstimateAt: new Date().toISOString()
+  };
+  pendingPfEstimate = null;
+  saveWealthFile("Accepted the estimated PF value and saved it to the local wealth file.");
+}
+
+function hydrateFromWealthData(estimate = null) {
+  pfProjection = createPfProjectionView(wealthData.pf, estimate, new Date());
+
+  if (wealthData.pf) {
+    pfBaselineBalance.value = wealthData.pf.currentBalance;
+    pfBaselineEmployee.value = wealthData.pf.employeeContribution;
+    pfBaselineEmployer.value = wealthData.pf.employerContribution;
+  }
+
+  if (wealthData.nps) {
+    lastNpsResult = createNpsResultFromRecord(wealthData.nps);
+    renderNpsResult(lastNpsResult, `Loaded NPS value ${lastNpsResult.formattedTotalValue} from local wealth file.`);
+  } else {
+    lastNpsResult = null;
+    resetNpsView();
+  }
+
+  renderPfProjection();
+  refreshPortfolioSummary();
 }
 
 function savePfProjectionBaseline() {
   try {
-    pfProjectionBaseline = createPfProjectionBaseline({
+    wealthData.pf = buildPfRecord({
       currentBalance: pfBaselineBalance.value,
       employeeContribution: pfBaselineEmployee.value,
       employerContribution: pfBaselineEmployer.value
     });
-    localStorage.setItem(PF_PROJECTION_STORAGE_KEY, JSON.stringify(pfProjectionBaseline));
-    pfProjection = calculatePfProjection(pfProjectionBaseline);
+    pendingPfEstimate = null;
+    pfProjection = createPfProjectionView(wealthData.pf, null, new Date());
     renderPfProjection();
     refreshPortfolioSummary();
-    setPfProjectionStatus("Saved PF projection baseline locally. Download local XLS to keep an Excel copy. Optional EPFO validation is recommended.");
-    autoSaveToGoogleSheets("PF projection baseline saved");
+    saveWealthFile("Saved PF baseline to the local wealth file. Future opens will estimate only after a full month has elapsed.");
   } catch (error) {
     setPfProjectionStatus(error.message);
   }
 }
 
 function clearPfProjectionBaseline() {
-  pfProjectionBaseline = null;
+  wealthData.pf = null;
+  pendingPfEstimate = null;
   pfProjection = null;
-  localStorage.removeItem(PF_PROJECTION_STORAGE_KEY);
   pfBaselineBalance.value = "";
   pfBaselineEmployee.value = "";
   pfBaselineEmployer.value = "";
   renderPfProjection();
   refreshPortfolioSummary();
-  setPfProjectionStatus("Cleared saved PF projection baseline.");
-}
-
-function loadPfProjectionBaseline() {
-  try {
-    const raw = localStorage.getItem(PF_PROJECTION_STORAGE_KEY);
-    return raw ? JSON.parse(raw) : null;
-  } catch {
-    return null;
-  }
-}
-
-function restorePfProjectionUi() {
-  if (!pfProjectionBaseline) {
-    renderPfProjection();
-    return;
-  }
-
-  pfBaselineBalance.value = pfProjectionBaseline.currentBalance;
-  pfBaselineEmployee.value = pfProjectionBaseline.employeeContribution;
-  pfBaselineEmployer.value = pfProjectionBaseline.employerContribution;
-  pfProjection = calculatePfProjection(pfProjectionBaseline);
-  renderPfProjection();
+  saveWealthFile("Cleared PF baseline and saved the local wealth file.");
 }
 
 function renderPfProjection() {
@@ -206,14 +324,20 @@ function renderPfProjection() {
     pfProjectedBalance.textContent = "-";
     pfProjectionMonthlyDeposit.textContent = "-";
     pfProjectionMonths.textContent = "-";
-    setPfProjectionStatus("No saved PF projection baseline yet.");
+    setPfProjectionStatus("No PF baseline loaded. Create/open a wealth file and save PF details.");
     return;
   }
 
   pfProjectedBalance.textContent = formatCurrency(pfProjection.projectedBalance);
   pfProjectionMonthlyDeposit.textContent = formatCurrency(pfProjection.monthlyDeposit);
   pfProjectionMonths.textContent = String(pfProjection.monthsElapsed);
-  setPfProjectionStatus(`Projected from saved baseline on ${formatDate(pfProjection.savedAt)}. Optional validation by logging into EPFO is recommended.`);
+
+  if (pendingPfEstimate) {
+    setPfProjectionStatus(`Estimated PF from saved file: ${formatCurrency(pendingPfEstimate.previousBalance)} -> ${formatCurrency(pendingPfEstimate.projectedBalance)} after ${pendingPfEstimate.monthsElapsed} completed month(s). Optional validation in EPFO is recommended before accepting.`);
+    return;
+  }
+
+  setPfProjectionStatus(`Loaded PF value ${formatCurrency(pfProjection.projectedBalance)}. No estimate is pending.`);
 }
 
 async function importNpsFromEmail() {
@@ -262,329 +386,48 @@ async function importNpsFromEmail() {
   }
 }
 
+function parseNpsAndRender() {
+  const result = parseNpsInput(npsInput.value);
+
+  if (result.totalValue === null) {
+    lastNpsResult = null;
+    wealthData.nps = null;
+    resetNpsView();
+    refreshPortfolioSummary();
+    setNpsStatus(result.warnings[0] || "Could not detect an NPS value. Paste the full NPS holding/statement text and try again.");
+    return;
+  }
+
+  wealthData.nps = buildNpsRecord(result);
+  renderNpsResult(result, `Detected NPS value ${result.formattedTotalValue}. Saving to local wealth file.`);
+  saveWealthFile("Saved NPS data to the local wealth file.");
+}
+
 function renderNpsResult(result, statusText) {
   lastNpsResult = result;
   npsTotalValue.textContent = result.formattedTotalValue;
   npsContributionTotal.textContent = formatOptionalCurrency(result.contributionTotal);
   npsConfidence.textContent = `${Math.round(result.confidence * 100)}%`;
   npsSource.textContent = formatNpsSource(result.valueSource);
-  renderNpsWarnings(result.warnings);
-  renderNpsHoldings(result.holdings);
+  renderNpsWarnings(result.warnings || []);
+  renderNpsHoldings(result.holdings || []);
 
   refreshPortfolioSummary();
   setNpsStatus(statusText);
-  autoSaveToGoogleSheets("NPS data updated");
 }
 
-function restoreGoogleSheetsSettings() {
-  try {
-    const raw = localStorage.getItem(GOOGLE_SHEETS_SETTINGS_KEY);
-    if (!raw) {
-      return;
-    }
-
-    const settings = JSON.parse(raw);
-    googleOauthClientId.value = settings.oauthClientId || "";
-    googleScriptUrl.value = settings.scriptUrl || "";
-    googleSpreadsheetId.value = settings.spreadsheetId || "";
-    googleAutosave.checked = settings.autosave !== false;
-  } catch {
-    // Ignore invalid local settings.
-  }
-}
-
-function saveGoogleSheetsSettings() {
-  localStorage.setItem(GOOGLE_SHEETS_SETTINGS_KEY, JSON.stringify({
-    oauthClientId: googleOauthClientId.value.trim(),
-    scriptUrl: googleScriptUrl.value.trim(),
-    spreadsheetId: googleSpreadsheetId.value.trim(),
-    autosave: googleAutosave.checked
-  }));
-}
-
-function autoSaveToGoogleSheets(reason) {
-  saveGoogleSheetsSettings();
-
-  if (!googleAutosave.checked) {
-    return;
-  }
-
-  if (!googleSpreadsheetId.value.trim()) {
-    setGoogleSheetsStatus("Google Sheets auto-save needs a Spreadsheet ID. Use Sign in and save to Google Sheets once to create a sheet, then keep its ID here.");
-    return;
-  }
-
-  if (googleOauthClientId.value.trim() && googleAccessToken) {
-    saveToGoogleSheetsWithOAuth({ reason, interactive: false });
-    return;
-  }
-
-  if (!googleScriptUrl.value.trim()) {
-    return;
-  }
-
-  saveToGoogleSheets({ openResult: false, reason });
-}
-
-async function saveToGoogleSheetsWithOAuth({ reason, interactive = true }) {
-  saveGoogleSheetsSettings();
-
-  if (!pfProjection && !lastNpsResult) {
-    setGoogleSheetsStatus("Save PF projection data or import NPS data before saving to Google Sheets.");
-    return;
-  }
-
-  try {
-    saveGoogleOauthButton.disabled = true;
-    const token = await getGoogleAccessToken({ interactive });
-    if (!token) {
-      return;
-    }
-
-    const payload = buildPortfolioExportPayload({
-      spreadsheetId: googleSpreadsheetId.value.trim(),
-      pfProjection,
-      npsResult: lastNpsResult,
-      updatedAt: new Date().toISOString()
-    });
-    const result = await writePortfolioToGoogleSheet(payload, token);
-
-    googleSpreadsheetId.value = result.spreadsheetId;
-    saveGoogleSheetsSettings();
-    setGoogleSheetsStatus(`Saved to Google Sheets (${reason}). Spreadsheet ID: ${result.spreadsheetId}.`);
-
-    if (interactive && result.spreadsheetUrl) {
-      window.open(result.spreadsheetUrl, "_blank", "noopener,noreferrer");
-    }
-  } catch (error) {
-    setGoogleSheetsStatus(`Google OAuth save failed: ${error.message}`);
-  } finally {
-    saveGoogleOauthButton.disabled = false;
-  }
-}
-
-function getGoogleAccessToken({ interactive }) {
-  return new Promise((resolve, reject) => {
-    if (googleAccessToken) {
-      resolve(googleAccessToken);
-      return;
-    }
-
-    const clientId = googleOauthClientId.value.trim();
-    if (!clientId) {
-      setGoogleSheetsStatus("Paste your Google OAuth Web Client ID before using direct Google sign-in.");
-      resolve(null);
-      return;
-    }
-
-    if (!window.google?.accounts?.oauth2) {
-      reject(new Error("Google Identity Services did not load. Check your internet connection and reload the page."));
-      return;
-    }
-
-    googleTokenClient = window.google.accounts.oauth2.initTokenClient({
-      client_id: clientId,
-      scope: "https://www.googleapis.com/auth/spreadsheets",
-      callback: (response) => {
-        if (response.error) {
-          reject(new Error(response.error_description || response.error));
-          return;
-        }
-
-        googleAccessToken = response.access_token;
-        resolve(googleAccessToken);
-      }
-    });
-
-    googleTokenClient.requestAccessToken({
-      prompt: interactive ? "consent" : ""
-    });
-  });
-}
-
-async function writePortfolioToGoogleSheet(payload, token) {
-  let spreadsheetId = payload.spreadsheetId;
-  let spreadsheetUrl = "";
-
-  if (!spreadsheetId) {
-    const created = await googleApiFetch("https://sheets.googleapis.com/v4/spreadsheets", token, {
-      method: "POST",
-      body: JSON.stringify({
-        properties: {
-          title: payload.spreadsheetName || "PF NPS Portfolio Tracker"
-        },
-        sheets: [
-          { properties: { title: "Summary" } },
-          { properties: { title: "PF Projection" } },
-          { properties: { title: "NPS Summary" } },
-          { properties: { title: "NPS Holdings" } },
-          { properties: { title: "Update History" } }
-        ]
-      })
-    });
-    spreadsheetId = created.spreadsheetId;
-    spreadsheetUrl = created.spreadsheetUrl || `https://docs.google.com/spreadsheets/d/${spreadsheetId}`;
-  }
-
-  const existing = await googleApiFetch(
-    `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(spreadsheetId)}?fields=sheets.properties.title,spreadsheetUrl`,
-    token
-  );
-  spreadsheetUrl = spreadsheetUrl || existing.spreadsheetUrl || `https://docs.google.com/spreadsheets/d/${spreadsheetId}`;
-  const existingTitles = new Set((existing.sheets || []).map((sheet) => sheet.properties.title));
-  const requiredTitles = ["Summary", "PF Projection", "NPS Summary", "NPS Holdings", "Update History"];
-  const missingTitles = requiredTitles.filter((title) => !existingTitles.has(title));
-
-  if (missingTitles.length > 0) {
-    await googleApiFetch(`https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(spreadsheetId)}:batchUpdate`, token, {
-      method: "POST",
-      body: JSON.stringify({
-        requests: missingTitles.map((title) => ({
-          addSheet: {
-            properties: { title }
-          }
-        }))
-      })
-    });
-  }
-
-  await replaceSheetValues(spreadsheetId, "Summary", payload.summaryRows, token);
-  await replaceSheetValues(spreadsheetId, "PF Projection", payload.pfProjectionRows, token);
-  await replaceSheetValues(spreadsheetId, "NPS Summary", payload.npsSummaryRows, token);
-  await replaceSheetValues(spreadsheetId, "NPS Holdings", payload.npsHoldingsRows, token);
-
-  if (missingTitles.includes("Update History")) {
-    await replaceSheetValues(spreadsheetId, "Update History", [[
-      "Updated At",
-      "PF Value",
-      "NPS Value",
-      "Combined Value",
-      "PF Source",
-      "NPS Source"
-    ]], token);
-  }
-
-  await appendSheetValues(spreadsheetId, "Update History", [payload.historyRow], token);
-
+function createNpsResultFromRecord(record) {
   return {
-    spreadsheetId,
-    spreadsheetUrl
+    totalValue: record.totalValue,
+    formattedTotalValue: formatCurrency(record.totalValue),
+    valueSource: record.valueSource,
+    confidence: record.confidence || 0,
+    contributionTotal: record.contributionTotal,
+    pran: record.pran,
+    holdings: record.holdings || [],
+    warnings: [],
+    lineCount: 0
   };
-}
-
-async function replaceSheetValues(spreadsheetId, sheetName, rows, token) {
-  const clearRange = encodeURIComponent(`${quoteSheetName(sheetName)}!A:Z`);
-  const updateRange = encodeURIComponent(`${quoteSheetName(sheetName)}!A1`);
-
-  await googleApiFetch(
-    `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(spreadsheetId)}/values/${clearRange}:clear`,
-    token,
-    { method: "POST" }
-  );
-  await googleApiFetch(
-    `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(spreadsheetId)}/values/${updateRange}?valueInputOption=USER_ENTERED`,
-    token,
-    {
-      method: "PUT",
-      body: JSON.stringify({
-        values: rows
-      })
-    }
-  );
-}
-
-async function appendSheetValues(spreadsheetId, sheetName, rows, token) {
-  const appendRange = encodeURIComponent(`${quoteSheetName(sheetName)}!A1`);
-
-  await googleApiFetch(
-    `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(spreadsheetId)}/values/${appendRange}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`,
-    token,
-    {
-      method: "POST",
-      body: JSON.stringify({
-        values: rows
-      })
-    }
-  );
-}
-
-function quoteSheetName(sheetName) {
-  return `'${String(sheetName).replace(/'/g, "''")}'`;
-}
-
-async function googleApiFetch(url, token, options = {}) {
-  const response = await fetch(url, {
-    method: options.method || "GET",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-      ...(options.headers || {})
-    },
-    body: options.body
-  });
-  const text = await response.text();
-  const payload = text ? JSON.parse(text) : {};
-
-  if (!response.ok) {
-    throw new Error(payload.error?.message || response.statusText);
-  }
-
-  return payload;
-}
-
-function saveToGoogleSheets({ openResult, reason }) {
-  saveGoogleSheetsSettings();
-
-  const scriptUrl = googleScriptUrl.value.trim();
-  if (!scriptUrl) {
-    setGoogleSheetsStatus("Paste your Google Apps Script Web App URL before saving to Google Sheets.");
-    return;
-  }
-
-  if (!pfProjection && !lastNpsResult) {
-    setGoogleSheetsStatus("Save PF projection data or import NPS data before saving to Google Sheets.");
-    return;
-  }
-
-  const payload = buildPortfolioExportPayload({
-    spreadsheetId: googleSpreadsheetId.value.trim(),
-    pfProjection,
-    npsResult: lastNpsResult,
-    updatedAt: new Date().toISOString()
-  });
-
-  postToGoogleAppsScript(scriptUrl, payload, openResult);
-  setGoogleSheetsStatus(openResult
-    ? "Submitted data to Google Sheets. A new tab will show the spreadsheet link or update result."
-    : `Auto-saved to Google Sheets: ${reason}.`);
-}
-
-function postToGoogleAppsScript(scriptUrl, payload, openResult) {
-  const targetName = openResult ? "_blank" : "google-sheets-save-frame";
-  let frame = document.querySelector(`iframe[name="${targetName}"]`);
-
-  if (!openResult && !frame) {
-    frame = document.createElement("iframe");
-    frame.name = targetName;
-    frame.hidden = true;
-    document.body.append(frame);
-  }
-
-  const form = document.createElement("form");
-  form.method = "POST";
-  form.action = scriptUrl;
-  form.target = targetName;
-  form.style.display = "none";
-
-  const input = document.createElement("input");
-  input.type = "hidden";
-  input.name = "payload";
-  input.value = JSON.stringify(payload);
-  form.append(input);
-
-  document.body.append(form);
-  form.submit();
-  form.remove();
 }
 
 function resetNpsView() {
@@ -597,13 +440,15 @@ function resetNpsView() {
 }
 
 function refreshPortfolioSummary() {
-  const pfValue = lastPfResult?.totalBalance ?? pfProjection?.projectedBalance ?? null;
+  const pfValue = pfProjection?.projectedBalance ?? null;
   const npsValue = lastNpsResult?.totalValue ?? null;
   const total = sumNullable([pfValue, npsValue]);
 
   portfolioTotal.textContent = total === null ? "-" : formatCurrency(total);
-  dashboard.hidden = !lastPfResult && !lastNpsResult && !pfProjection;
-  downloadXlsButton.disabled = !lastPfResult && !lastNpsResult && !pfProjection;
+  dashboard.hidden = !pfProjection && !lastNpsResult;
+  downloadXlsButton.disabled = !pfProjection && !lastNpsResult;
+  saveWealthFileButton.disabled = !wealthFileHandle;
+  acceptPfEstimateButton.disabled = !pendingPfEstimate;
 }
 
 function renderNpsWarnings(warnings) {
@@ -645,17 +490,8 @@ function renderNpsHoldings(holdings) {
   }
 }
 
-function sumNullable(values) {
-  const presentValues = values.filter((value) => value !== null && value !== undefined);
-  if (presentValues.length === 0) {
-    return null;
-  }
-
-  return presentValues.reduce((total, value) => total + value, 0);
-}
-
-function downloadWorkbook(pfResult, npsResult, pfProjectionResult) {
-  const workbook = buildWorkbookXml(pfResult, npsResult, pfProjectionResult);
+function downloadWorkbook(npsResult, pfProjectionResult) {
+  const workbook = buildWorkbookXml(npsResult, pfProjectionResult);
   const blob = new Blob([workbook], {
     type: "application/vnd.ms-excel;charset=utf-8"
   });
@@ -663,7 +499,7 @@ function downloadWorkbook(pfResult, npsResult, pfProjectionResult) {
   const timestamp = new Date().toISOString().slice(0, 10);
 
   link.href = URL.createObjectURL(blob);
-  link.download = `epfo-balance-${timestamp}.xls`;
+  link.download = `wealth-dashboard-${timestamp}.xls`;
   document.body.append(link);
   link.click();
   link.remove();
@@ -671,43 +507,26 @@ function downloadWorkbook(pfResult, npsResult, pfProjectionResult) {
   setPfProjectionStatus("Downloaded an Excel-compatible XLS workbook with Summary, PF, and NPS sheets.");
 }
 
-function buildWorkbookXml(pfResult, npsResult, pfProjectionResult) {
-  const actualPfValue = pfResult?.totalBalance ?? null;
-  const projectedPfValue = pfProjectionResult?.projectedBalance ?? null;
-  const pfValue = actualPfValue ?? projectedPfValue;
+function buildWorkbookXml(npsResult, pfProjectionResult) {
+  const pfValue = pfProjectionResult?.projectedBalance ?? null;
   const npsValue = npsResult?.totalValue ?? null;
   const combinedValue = sumNullable([pfValue, npsValue]);
   const worksheets = [
     worksheetXml("Summary", [
-      ["Asset", "Total Value", "Source"],
-      ["PF / EPFO", pfValue, actualPfValue !== null ? "Official/imported PF value" : projectedPfValue !== null ? "Projected PF value" : ""],
-      ["NPS", npsValue],
-      ["Combined Total", combinedValue],
-      ["PF actual/imported value", actualPfValue],
-      ["PF projected value", projectedPfValue],
-      ["PF projection validation", pfProjectionResult ? "Optional but recommended - manually log into EPFO and compare" : ""]
-    ]),
-    worksheetXml("PF Summary", [
-      ["Metric", "Value"],
-      ["PF value used in Summary", pfResult?.totalBalance ?? pfProjectionResult?.projectedBalance ?? null],
-      ["PF value source", pfResult ? "Official/imported PF value" : pfProjectionResult ? "Projected PF value" : ""],
-      ["Total EPFO balance", pfResult?.totalBalance ?? null],
-      ["Employee contribution", pfResult?.totals.employee ?? null],
-      ["Employer contribution", pfResult?.totals.employer ?? null],
-      ["Pension / EPS", pfResult?.totals.pension ?? null],
-      ["Detection source", pfResult ? formatSource(pfResult.balanceSource) : ""],
-      ["Parser confidence", pfResult ? `${Math.round(pfResult.confidence * 100)}%` : ""]
+      ["Asset", "Total Value", "Last Updated"],
+      ["PF / EPFO", pfValue, wealthData.pf?.lastUpdatedAt || ""],
+      ["NPS", npsValue, wealthData.nps?.lastUpdatedAt || ""],
+      ["Combined Total", combinedValue, new Date().toISOString()]
     ]),
     worksheetXml("PF Projection", [
       ["Metric", "Value"],
-      ["Saved baseline current balance", pfProjectionResult?.currentBalance ?? null],
-      ["Last month employee contribution", pfProjectionResult?.employeeContribution ?? null],
-      ["Last month employer contribution", pfProjectionResult?.employerContribution ?? null],
+      ["Current PF balance", wealthData.pf?.currentBalance ?? null],
+      ["Last month employee contribution", wealthData.pf?.employeeContribution ?? null],
+      ["Last month employer contribution", wealthData.pf?.employerContribution ?? null],
       ["Assumed monthly deposit", pfProjectionResult?.monthlyDeposit ?? null],
-      ["Saved at", pfProjectionResult ? formatDate(pfProjectionResult.savedAt) : ""],
-      ["Projection as of", pfProjectionResult ? formatDate(pfProjectionResult.asOf) : ""],
-      ["Completed months elapsed", pfProjectionResult?.monthsElapsed ?? null],
+      ["Last calculated at", wealthData.pf?.lastCalculatedAt ?? ""],
       ["Projected PF balance", pfProjectionResult?.projectedBalance ?? null],
+      ["Pending estimate accepted", pendingPfEstimate ? "No" : "Yes"],
       ["Validation recommendation", pfProjectionResult ? "Optional but recommended: manually log into EPFO and compare with official current balance" : ""]
     ]),
     worksheetXml("NPS Summary", [
@@ -715,7 +534,7 @@ function buildWorkbookXml(pfResult, npsResult, pfProjectionResult) {
       ["Total NPS value", npsResult?.totalValue ?? null],
       ["Total contribution", npsResult?.contributionTotal ?? null],
       ["PRAN", npsResult?.pran ?? ""],
-      ["Detection source", npsResult ? formatNpsSource(npsResult.valueSource) : ""],
+      ["Detection source", npsResult?.valueSource ?? ""],
       ["Parser confidence", npsResult ? `${Math.round(npsResult.confidence * 100)}%` : ""]
     ]),
     worksheetXml("NPS Holdings", [
@@ -740,10 +559,22 @@ function buildWorkbookXml(pfResult, npsResult, pfProjectionResult) {
  xmlns:html="http://www.w3.org/TR/REC-html40">
  <Styles>
   <Style ss:ID="header"><Font ss:Bold="1"/><Interior ss:Color="#E8F1FF" ss:Pattern="Solid"/></Style>
-  <Style ss:ID="money"><NumberFormat ss:Format="₹#,##0.00"/></Style>
  </Styles>
  ${worksheets.join("\n")}
 </Workbook>`;
+}
+
+function supportsFileSystemAccess() {
+  return "showOpenFilePicker" in window && "showSaveFilePicker" in window;
+}
+
+function sumNullable(values) {
+  const presentValues = values.filter((value) => value !== null && value !== undefined);
+  if (presentValues.length === 0) {
+    return null;
+  }
+
+  return presentValues.reduce((total, value) => total + value, 0);
 }
 
 function formatOptionalCurrency(value) {
@@ -752,18 +583,6 @@ function formatOptionalCurrency(value) {
 
 function numberForDisplay(value) {
   return value === null || value === undefined ? "-" : String(value);
-}
-
-function formatSource(value) {
-  return {
-    "labelled-total": "Clear total balance label",
-    "overview-current-balance": "EPFO overview current balance",
-    "closing-balance-shares": "Closing employee + employer shares",
-    "component-sum": "Sum of detected components",
-    "company-balance-sum": "Sum of latest company balances",
-    "local-llm": "Local LLM extraction",
-    "last-row-balance": "Last passbook row balance"
-  }[value] || value;
 }
 
 function formatNpsSource(value) {
@@ -795,24 +614,20 @@ function cellXml(value, isHeader) {
   return `<Cell${style}><Data ss:Type="${type}">${content}</Data></Cell>`;
 }
 
-function setPfProjectionStatus(message) {
-  pfProjectionStatus.textContent = message;
+function setWealthFileStatus(message) {
+  wealthFileStatus.textContent = message;
 }
 
-function setGoogleSheetsStatus(message) {
-  googleSheetsStatus.textContent = message;
+function setPfProjectionStatus(message) {
+  pfProjectionStatus.textContent = message;
 }
 
 function setNpsEmailStatus(message) {
   npsEmailStatusMessage.textContent = message;
 }
 
-function formatDate(value) {
-  return new Intl.DateTimeFormat("en-IN", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric"
-  }).format(new Date(value));
+function setNpsStatus(message) {
+  npsStatusMessage.textContent = message;
 }
 
 function xmlEscape(value) {
