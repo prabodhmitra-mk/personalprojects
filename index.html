@@ -57,6 +57,33 @@
 
         <article class="panel">
           <span class="step">2</span>
+          <h2>Google Sheets / Drive storage</h2>
+          <p>
+            Deploy the included Google Apps Script in your Google account, paste its Web App URL here, and save
+            PF/NPS data into a Google Sheet in your Drive.
+          </p>
+          <div class="settings-grid">
+            <label class="wide-field">
+              <span>Apps Script Web App URL</span>
+              <input id="google-script-url" type="url" spellcheck="false" placeholder="https://script.google.com/macros/s/.../exec">
+            </label>
+            <label>
+              <span>Spreadsheet ID</span>
+              <input id="google-spreadsheet-id" type="text" spellcheck="false" placeholder="Leave blank to create a new sheet">
+            </label>
+            <label class="checkbox-field">
+              <input id="google-autosave" type="checkbox" checked>
+              <span>Auto-save after PF/NPS updates when Spreadsheet ID is set</span>
+            </label>
+          </div>
+          <div class="actions">
+            <button id="save-google-sheets" class="primary" type="button">Save current data to Google Sheets</button>
+          </div>
+          <p id="google-sheets-status" class="status">Google Sheets storage is optional.</p>
+        </article>
+
+        <article class="panel">
+          <span class="step">3</span>
           <h2>Import NPS statement from email</h2>
           <p>
             The local server can read recent emails where the subject contains <strong>nps</strong> and
@@ -106,7 +133,7 @@
         </article>
 
         <article class="panel">
-          <span class="step">3</span>
+          <span class="step">4</span>
           <h2>Import NPS holdings/statement manually</h2>
           <p>
             You can still open the official NPS CRA portal, log in yourself, then copy or export your holdings/statement text here.

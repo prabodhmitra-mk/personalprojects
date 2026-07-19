@@ -5,6 +5,10 @@ import {
   calculatePfProjection,
   createPfProjectionBaseline
 } from "./pfProjection.js";
+import {
+  GOOGLE_SHEETS_SETTINGS_KEY,
+  buildPortfolioExportPayload
+} from "./portfolioExport.js";
 
 const EPFO_PASSBOOK_URL = "https://passbook.epfindia.gov.in/MemberPassBook/Login";
 const NPS_PORTAL_URL = "https://cra-nsdl.com/CRA/";
@@ -34,6 +38,11 @@ const savePfProjectionButton = document.querySelector("#save-pf-projection");
 const validatePfProjectionButton = document.querySelector("#validate-pf-projection");
 const clearPfProjectionButton = document.querySelector("#clear-pf-projection");
 const pfProjectionStatus = document.querySelector("#pf-projection-status");
+const googleScriptUrl = document.querySelector("#google-script-url");
+const googleSpreadsheetId = document.querySelector("#google-spreadsheet-id");
+const googleAutosave = document.querySelector("#google-autosave");
+const saveGoogleSheetsButton = document.querySelector("#save-google-sheets");
+const googleSheetsStatus = document.querySelector("#google-sheets-status");
 const dashboard = document.querySelector("#dashboard");
 const portfolioTotal = document.querySelector("#portfolio-total");
 const pfProjectedBalance = document.querySelector("#pf-projected-balance");
@@ -71,6 +80,7 @@ parseNpsButton.addEventListener("click", parseNpsAndRender);
 importNpsEmailButton.addEventListener("click", importNpsFromEmail);
 savePfProjectionButton.addEventListener("click", savePfProjectionBaseline);
 clearPfProjectionButton.addEventListener("click", clearPfProjectionBaseline);
+saveGoogleSheetsButton.addEventListener("click", () => saveToGoogleSheets({ openResult: true, reason: "Manual Google Sheets save" }));
 validatePfProjectionButton.addEventListener("click", () => {
   window.open(EPFO_PASSBOOK_URL, "_blank", "noopener,noreferrer");
   setPfProjectionStatus("Opened EPFO. Optional but recommended: log in manually and compare the projected PF balance with the official current balance.");
@@ -108,6 +118,7 @@ downloadXlsButton.addEventListener("click", () => {
 });
 
 restorePfProjectionUi();
+restoreGoogleSheetsSettings();
 refreshPortfolioSummary();
 
 function parseNpsAndRender() {
@@ -136,6 +147,7 @@ function savePfProjectionBaseline() {
     renderPfProjection();
     refreshPortfolioSummary();
     setPfProjectionStatus("Saved PF projection baseline locally. Download local XLS to keep an Excel copy. Optional EPFO validation is recommended.");
+    autoSaveToGoogleSheets("PF projection baseline saved");
   } catch (error) {
     setPfProjectionStatus(error.message);
   }
@@ -247,6 +259,101 @@ function renderNpsResult(result, statusText) {
 
   refreshPortfolioSummary();
   setNpsStatus(statusText);
+  autoSaveToGoogleSheets("NPS data updated");
+}
+
+function restoreGoogleSheetsSettings() {
+  try {
+    const raw = localStorage.getItem(GOOGLE_SHEETS_SETTINGS_KEY);
+    if (!raw) {
+      return;
+    }
+
+    const settings = JSON.parse(raw);
+    googleScriptUrl.value = settings.scriptUrl || "";
+    googleSpreadsheetId.value = settings.spreadsheetId || "";
+    googleAutosave.checked = settings.autosave !== false;
+  } catch {
+    // Ignore invalid local settings.
+  }
+}
+
+function saveGoogleSheetsSettings() {
+  localStorage.setItem(GOOGLE_SHEETS_SETTINGS_KEY, JSON.stringify({
+    scriptUrl: googleScriptUrl.value.trim(),
+    spreadsheetId: googleSpreadsheetId.value.trim(),
+    autosave: googleAutosave.checked
+  }));
+}
+
+function autoSaveToGoogleSheets(reason) {
+  saveGoogleSheetsSettings();
+
+  if (!googleAutosave.checked || !googleScriptUrl.value.trim()) {
+    return;
+  }
+
+  if (!googleSpreadsheetId.value.trim()) {
+    setGoogleSheetsStatus("Google Sheets auto-save needs a Spreadsheet ID. Click Save current data to Google Sheets once to create a sheet, then copy its ID here.");
+    return;
+  }
+
+  saveToGoogleSheets({ openResult: false, reason });
+}
+
+function saveToGoogleSheets({ openResult, reason }) {
+  saveGoogleSheetsSettings();
+
+  const scriptUrl = googleScriptUrl.value.trim();
+  if (!scriptUrl) {
+    setGoogleSheetsStatus("Paste your Google Apps Script Web App URL before saving to Google Sheets.");
+    return;
+  }
+
+  if (!pfProjection && !lastNpsResult) {
+    setGoogleSheetsStatus("Save PF projection data or import NPS data before saving to Google Sheets.");
+    return;
+  }
+
+  const payload = buildPortfolioExportPayload({
+    spreadsheetId: googleSpreadsheetId.value.trim(),
+    pfProjection,
+    npsResult: lastNpsResult,
+    updatedAt: new Date().toISOString()
+  });
+
+  postToGoogleAppsScript(scriptUrl, payload, openResult);
+  setGoogleSheetsStatus(openResult
+    ? "Submitted data to Google Sheets. A new tab will show the spreadsheet link or update result."
+    : `Auto-saved to Google Sheets: ${reason}.`);
+}
+
+function postToGoogleAppsScript(scriptUrl, payload, openResult) {
+  const targetName = openResult ? "_blank" : "google-sheets-save-frame";
+  let frame = document.querySelector(`iframe[name="${targetName}"]`);
+
+  if (!openResult && !frame) {
+    frame = document.createElement("iframe");
+    frame.name = targetName;
+    frame.hidden = true;
+    document.body.append(frame);
+  }
+
+  const form = document.createElement("form");
+  form.method = "POST";
+  form.action = scriptUrl;
+  form.target = targetName;
+  form.style.display = "none";
+
+  const input = document.createElement("input");
+  input.type = "hidden";
+  input.name = "payload";
+  input.value = JSON.stringify(payload);
+  form.append(input);
+
+  document.body.append(form);
+  form.submit();
+  form.remove();
 }
 
 function resetNpsView() {
@@ -459,6 +566,10 @@ function cellXml(value, isHeader) {
 
 function setPfProjectionStatus(message) {
   pfProjectionStatus.textContent = message;
+}
+
+function setGoogleSheetsStatus(message) {
+  googleSheetsStatus.textContent = message;
 }
 
 function setNpsEmailStatus(message) {

@@ -265,6 +265,17 @@ textarea:focus {
   gap: 0.3rem;
 }
 
+.settings-grid .wide-field {
+  grid-column: 1 / -1;
+}
+
+.settings-grid .checkbox-field {
+  align-items: center;
+  display: flex;
+  gap: 0.55rem;
+  grid-column: 1 / -1;
+}
+
 .settings-grid span {
   color: var(--muted);
   font-size: 0.78rem;
@@ -278,6 +289,11 @@ textarea:focus {
   min-height: 3rem;
   padding: 0.7rem 0.8rem;
   width: 100%;
+}
+
+.settings-grid .checkbox-field input {
+  min-height: auto;
+  width: auto;
 }
 
 .status {

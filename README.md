@@ -6,9 +6,10 @@ A small privacy-first web app that helps you project PF value, import NPS holdin
 
 1. Start the app locally.
 2. Enter a manual PF projection baseline: current PF balance plus last month employee/employer contribution.
-3. Import NPS from email attachments or manually import copied/downloaded NPS holdings or statement content.
-4. Review projected PF, NPS, and combined portfolio totals.
-5. Click **Download local XLS** to save an Excel-compatible workbook on your machine.
+3. Configure optional Google Sheets/Drive storage using the included Apps Script.
+4. Import NPS from email attachments or manually import copied/downloaded NPS holdings or statement content.
+5. Review projected PF, NPS, and combined portfolio totals.
+6. Click **Download local XLS** or **Save current data to Google Sheets**.
 
 The app does not store your EPFO, NPS, or email credentials. Imported NPS content is processed locally.
 
@@ -38,6 +39,53 @@ The Excel workbook includes a `PF Projection` sheet with:
 - Completed months elapsed.
 - Projected PF balance.
 - Optional validation recommendation.
+
+## Save to Google Sheets / Google Drive
+
+The app can save PF/NPS data into a Google Sheet in your Drive through a Google Apps Script that you own.
+This avoids shipping Google OAuth credentials inside the local app.
+
+### One-time setup
+
+1. Open Google Apps Script:
+
+   ```text
+   https://script.google.com
+   ```
+
+2. Create a new project.
+3. Copy the contents of:
+
+   ```text
+   google-apps-script/Code.gs
+   ```
+
+   into the Apps Script editor.
+
+4. Deploy it as a Web App:
+   - Execute as: **Me**
+   - Who has access: **Only myself**
+
+5. Copy the Web App URL.
+6. Paste it into **Apps Script Web App URL** in this app.
+7. Click **Save current data to Google Sheets**.
+
+If **Spreadsheet ID** is blank, the script creates a new Google Sheet and opens a result page with the new Spreadsheet ID.
+Copy that ID back into this app so future saves update the same sheet.
+
+### Google Sheet tabs
+
+The Google Sheet contains:
+
+- `Summary`
+- `PF Projection`
+- `NPS Summary`
+- `NPS Holdings`
+- `Update History`
+
+The `Update History` tab appends a new row each time data is saved, including last updated time, PF value, NPS value, and combined value.
+
+If **Auto-save after PF/NPS updates** is checked and a Spreadsheet ID is set, the app submits updates after saving PF projection data or parsing NPS data.
 
 ## Import NPS data
 
