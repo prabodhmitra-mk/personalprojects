@@ -1,0 +1,152 @@
+LINKEDIN PROFILE READY COPY
+Prabodh Mitra
+Bengaluru, Karnataka, India
+
+Use this file to copy/paste into LinkedIn sections.
+
+============================================================
+HEADLINE
+============================================================
+
+Architect | Data Engineering Lead | Personalization Platforms | AI Search & Recommendations | Big Data | Cloud-Native Platforms | Telco
+
+Alternative shorter headline:
+
+Architect | Integration, Big Data, AI Search, Recommendations & Cloud Platforms
+
+============================================================
+ABOUT
+============================================================
+
+Results-driven technology leader and architect with extensive experience across enterprise integration, data architecture, AI/ML, and cloud-native platforms. I specialize in designing scalable, high-performance systems that support digital transformation, operational efficiency, and measurable business outcomes across telecom, media, finance, aviation, and retail domains.
+
+My recent work focuses on AI-powered data, search, and personalization platforms. I have led initiatives around custom recommendation-engine architecture, LLM-assisted content enrichment, external embedding model integration, Delta Lake knowledge bases, cost-efficient analytics pipelines, and open-source observability modernization. After an initial Vespa.ai POC, I shifted focus to building an in-house recommendation engine that can be customized more easily for product and business needs.
+
+I have architected an end-to-end personalization platform for a streaming video product, translating viewer watch behavior into personalized content rails such as "Because You Watched", "You May Like", Taste Cluster, trending content, and Shorts recommendations. The platform combines Delta Lake data sync, PostgreSQL/pgvector serving, Kubernetes deployment, engagement-aware ML modeling, cache-first recommendation serving, and parental-control-aware governance.
+
+I also bring deep expertise in enterprise integration and API architecture, including microservices, event-driven patterns, ESB/SOA, OSB, API gateways, B2B platforms, and secure reusable APIs. I have led MLOps pipelines, anomaly detection models, predictive analytics, AIOps monitoring, and large-scale observability solutions using platforms such as BigQuery, Vertex AI, Azure Data Explorer, Delta Lake, Kafka, Elasticsearch, OpenObserve, PostgreSQL/pgvector, Spark, and cloud-native storage.
+
+As a technical leader, I partner with business, product, and engineering teams to shape architecture strategy, evaluate platforms, deliver PoCs, optimize infrastructure costs, modernize codebases, and mentor teams. I am especially interested in data-driven products, AI in enterprise systems, scalable cloud architectures, and practical automation that improves reliability and user experience.
+
+============================================================
+CURRENT EXPERIENCE - MEDIAKIND
+============================================================
+
+Data Engineering Lead
+September 2023 - Present
+Bengaluru, Karnataka, India
+
+Lead the design and optimization of scalable data platforms, AI-driven search, recommendation systems, personalization APIs, observability modernization, and cost-efficient analytics strategies for media and subscriber data products.
+
+Key contributions:
+
+- Led implementation of a Delta Lake-based enterprise data platform, centralizing client data, logs, subscriber insights, and operational datasets for efficient storage, processing, and downstream analytics.
+- Built AI-powered conversational data solutions using open-source LLMs, Ollama, Duckling, and Delta Lake as a knowledge base to improve access to operational and business insights.
+- Designed and evolved search and recommendation capabilities, including an initial Vespa.ai POC followed by a customizable in-house recommendation engine for "You May Like", "More Like This", "Because You Watched", trending content, embeddings, and LLM-driven enrichment.
+- Led design and delivery of an end-to-end personalization platform for streaming subscribers, turning watch behavior into production content rails through batch intelligence, PostgreSQL/pgvector serving, cache-first APIs, and Kubernetes-based operations.
+- Integrated external embedding models and LLM enrichment into ingestion flows to improve content understanding, metadata quality, similarity matching, and personalization.
+- Architected analytics cost optimization strategies using lifecycle policies, tiered storage, cloud transaction efficiency, and dynamic resource allocation.
+- Driving migration from Elasticsearch to OpenObserve to reduce observability platform cost, adopt an open-source Rust-based stack, enable easier AI-assisted feature customization, and retain telemetry data for longer-term trend analysis without requiring enterprise licensing.
+- Built real-time monitoring and alerting integrations through Teams channels and Zabbix to improve platform stability, visibility, and incident response.
+- Led data pipeline and search platform evaluations, including cost-benefit analysis, infrastructure optimization, and technical governance.
+- Directed codebase modernization efforts to remove unused and outdated code, reduce technical debt, and improve maintainability and performance.
+- Partnered with product, business, and engineering stakeholders to align data strategy with company goals and contribute to RFP responses.
+
+============================================================
+FEATURED PROJECT - RECOMMENDATION ENGINE | MEDIAFIRST
+============================================================
+
+Technical Lead / Architect
+
+Led design and delivery of an end-to-end personalization platform for a streaming video product, turning viewer watch behavior into personalized content rails such as "Because You Watched", Taste Cluster, and "You May Like". After an initial Vespa.ai POC, helped shape the move toward an in-house recommendation engine that could be customized more easily. Architected a scalable batch-plus-serving model using Delta Lake, PostgreSQL/pgvector, Kubernetes, and cache-first APIs to balance recommendation freshness, parental controls, cost efficiency, and operational resilience.
+
+Resume-ready project bullets:
+
+- Owned the personalization platform from data ingestion through ML inference to client-facing APIs, enabling personalized hubs and feed rails for streaming subscribers.
+- Defined a cache-first serving architecture with fresh, stale, and on-demand fallback paths, ensuring high availability without blocking batch processing on cache failures.
+- Delivered a multi-stage ML pipeline covering Delta Lake watch-history sync, user taste clustering, recommendation generation with diversity, and cold-start popularity fallback.
+- Introduced engagement-aware personalization through adaptive history windows for high, medium, and at-risk viewers, reducing unnecessary compute while improving relevance for sparse users.
+- Productized taste clustering as a pluggable algorithm framework supporting K-Means, HDBSCAN, graph-based methods, versioned policies, and A/B-ready experimentation modes.
+- Embedded compliance and trust controls through configurable parental rating filters and entitlement-aware content caps aligned with catalog maturity codes.
+- Operationalized the platform on Azure and Kubernetes using Helm, scheduled CronJobs, a single containerized Python stack, idempotent schema bootstrap, structured logging, and spot-node batch execution for cost efficiency.
+- Established clear configuration ownership across product, data science, and DevOps for database policies, Helm tuning, API serving knobs, and future admin API expansion.
+
+One-line project headline:
+
+Architected and delivered an ML-powered personalization platform for a streaming TV product, serving personalized content rails at scale via Kubernetes and PostgreSQL vector search.
+
+============================================================
+FEATURED PROJECT - ELASTICSEARCH TO OPENOBSERVE MIGRATION
+============================================================
+
+Driving migration from Elasticsearch to OpenObserve to reduce observability platform cost, adopt an open-source Rust-based stack, enable easier AI-assisted feature customization, and retain telemetry data for longer-term trend analysis without requiring enterprise licensing.
+
+Suggested project bullets:
+
+- Evaluating OpenObserve as a lower-cost, open-source alternative to Elasticsearch for observability and analytics data.
+- Designed the migration direction to support longer data retention, enabling future trend analysis on historical telemetry.
+- Reduced dependency on enterprise licensing for long-term retention and advanced analytics use cases.
+- Positioned the platform for easier feature customization through an open-source, Rust-based architecture.
+
+============================================================
+TOP SKILLS / KEYWORDS
+============================================================
+
+AI Search and Recommendation Systems
+Personalization Platform Architecture
+Custom Recommendation Engine Architecture
+Big Data Architecture
+Enterprise Integration and API Architecture
+Vector Search
+PostgreSQL and pgvector
+Delta Lake
+Kubernetes
+Helm
+Azure
+GCP
+Kafka
+Redis
+Elasticsearch
+OpenObserve
+Spark
+FastAPI
+MLOps
+Content Compliance
+Parental Controls
+Streaming Media
+Observability
+Cost Optimization
+Technical Leadership
+
+============================================================
+CERTIFICATIONS
+============================================================
+
+Machine Learning
+Vector Databases: An Introduction with Chroma DB
+Fundamentals of MCP
+DS C18 PGC
+
+============================================================
+AWARDS
+============================================================
+
+Feather in my cap
+Star of Service Factory
+Leading By Example
+Certificate of spot excellence
+Circle of Excellence - DTS Smart Infrastructure
+
+============================================================
+EDUCATION
+============================================================
+
+International Institute of Information Technology Bangalore
+Post Graduate Certificate, Foundations of Data Science, 2020
+
+Delhi College of Engineering
+Bachelor of Engineering, Electrical, 2001-2005
+
+Lovely Public School
+1988-2000
+
