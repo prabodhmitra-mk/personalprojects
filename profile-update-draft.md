@@ -29,15 +29,16 @@ Architect | Integration, Big Data, AI Search and Cloud Platforms
 7. Redis
 8. Kafka
 9. Elasticsearch
-10. Cloud Data Platforms
+10. OpenObserve and Observability Platforms
+11. Cloud Data Platforms
 
 ## Updated summary
 
 Results-driven technology leader and architect with extensive experience across enterprise integration, data architecture, AI/ML, and cloud-native platforms. I specialize in designing scalable, high-performance systems that support digital transformation, operational efficiency, and measurable business outcomes across telecom, finance, media, aviation, and retail domains.
 
-My recent work focuses on AI-powered data and search platforms, including Vespa.ai-based recommendation systems, LLM-assisted content enrichment, external embedding model integration, Delta Lake knowledge bases, and cost-efficient analytics pipelines. I have led initiatives covering real-time recommendations such as "More Like This", "You May Like", "Because You Watched", trending content, and Shorts recommendations, combining data engineering, search relevance, and machine learning practices.
+My recent work focuses on AI-powered data and search platforms, including Vespa.ai-based recommendation systems, LLM-assisted content enrichment, external embedding model integration, Delta Lake knowledge bases, cost-efficient analytics pipelines, and open-source observability modernization. I have led initiatives covering real-time recommendations such as "More Like This", "You May Like", "Because You Watched", trending content, and Shorts recommendations, while also evaluating lower-cost, extensible platforms such as OpenObserve for long-term telemetry retention and trend analysis.
 
-I bring deep expertise in enterprise integration and API architecture, including microservices, event-driven patterns, ESB/SOA, OSB, API gateways, B2B platforms, and secure reusable APIs. I have also led MLOps pipelines, anomaly detection models, predictive analytics, AIOps monitoring, and large-scale observability solutions using platforms such as BigQuery, Vertex AI, Azure Data Explorer, Delta Lake, Kafka, Elasticsearch, Spark, and cloud-native storage.
+I bring deep expertise in enterprise integration and API architecture, including microservices, event-driven patterns, ESB/SOA, OSB, API gateways, B2B platforms, and secure reusable APIs. I have also led MLOps pipelines, anomaly detection models, predictive analytics, AIOps monitoring, and large-scale observability solutions using platforms such as BigQuery, Vertex AI, Azure Data Explorer, Delta Lake, Kafka, Elasticsearch, OpenObserve, Spark, and cloud-native storage.
 
 As a technical leader, I partner with business, product, and engineering teams to shape architecture strategy, evaluate platforms, deliver PoCs, optimize infrastructure costs, modernize codebases, and mentor teams. I am especially interested in data-driven products, AI in enterprise systems, scalable cloud architectures, and practical automation that improves reliability and user experience.
 
@@ -47,7 +48,7 @@ As a technical leader, I partner with business, product, and engineering teams t
 
 September 2023 - Present | Bengaluru, Karnataka, India
 
-Lead the design and optimization of scalable data platforms, AI-driven search, recommendation systems, and cost-efficient analytics strategies for media and subscriber data products. Current focus areas include Vespa.ai, LLM-assisted ingestion, external embedding models, content enrichment, and personalization features such as "More Like This", "You May Like", "Because You Watched", trending content, and Shorts recommendations.
+Lead the design and optimization of scalable data platforms, AI-driven search, recommendation systems, observability modernization, and cost-efficient analytics strategies for media and subscriber data products. Current focus areas include Vespa.ai, LLM-assisted ingestion, external embedding models, content enrichment, OpenObserve migration, and personalization features such as "More Like This", "You May Like", "Because You Watched", trending content, and Shorts recommendations.
 
 Profile-ready contribution bullets:
 
@@ -56,6 +57,7 @@ Profile-ready contribution bullets:
 - Designed and evolved search and recommendation capabilities, including "You May Like", "More Like This", "Because You Watched", trending content, Vespa.ai-based recommendations, embeddings, and LLM-driven enrichment.
 - Integrated external embedding models and LLM enrichment into ingestion flows to improve content understanding, metadata quality, similarity matching, and personalization.
 - Architected analytics cost optimization strategies using lifecycle policies, tiered storage, cloud transaction efficiency, and dynamic resource allocation.
+- Driving migration from Elasticsearch to OpenObserve to reduce observability platform cost, adopt an open-source Rust-based stack, enable easier AI-assisted feature customization, and retain telemetry data for longer-term trend analysis without requiring enterprise licensing.
 - Built real-time monitoring and alerting integrations through Teams channels and Zabbix to improve platform stability, visibility, and incident response.
 - Led data pipeline and search platform evaluations, including cost-benefit analysis, infrastructure optimization, and technical governance.
 - Directed codebase modernization efforts to remove unused and outdated code, reduce technical debt, and improve maintainability and performance.
@@ -67,7 +69,7 @@ Add notes here as you complete work today. After each entry, convert it into one
 
 | Date | Work completed | Technologies used | Business or technical impact | Profile-ready bullet |
 | --- | --- | --- | --- | --- |
-| 2026-08-23 |  |  |  |  |
+| 2026-08-23 | Working on migration from Elasticsearch to OpenObserve for observability and analytics data. | Elasticsearch, OpenObserve, Rust-based observability stack, open-source platform evaluation | Lowers platform cost, avoids enterprise license dependency for longer retention, enables easier AI-assisted feature changes, and keeps more historical data available for trend analysis. | Driving migration from Elasticsearch to OpenObserve to reduce observability cost, extend telemetry retention, support long-term trend analysis, and adopt an open-source Rust-based platform that can be customized more easily with AI-assisted development. |
 
 ### Prompts to capture today's work
 
