@@ -21,24 +21,29 @@ Architect | Integration, Big Data, AI Search and Cloud Platforms
 ## Recommended top skills
 
 1. AI Search and Recommendation Systems
-2. Big Data Architecture
-3. Enterprise Integration and API Architecture
-4. Vespa.ai
-5. Delta Lake
-6. Kubernetes
-7. Redis
-8. Kafka
-9. Elasticsearch
-10. OpenObserve and Observability Platforms
-11. Cloud Data Platforms
+2. Personalization Platform Architecture
+3. Big Data Architecture
+4. Enterprise Integration and API Architecture
+5. Vespa.ai
+6. Delta Lake
+7. Kubernetes
+8. PostgreSQL and pgvector
+9. Redis
+10. Kafka
+11. Elasticsearch
+12. OpenObserve and Observability Platforms
+13. MLOps
+14. Cloud Data Platforms
 
 ## Updated summary
 
 Results-driven technology leader and architect with extensive experience across enterprise integration, data architecture, AI/ML, and cloud-native platforms. I specialize in designing scalable, high-performance systems that support digital transformation, operational efficiency, and measurable business outcomes across telecom, finance, media, aviation, and retail domains.
 
-My recent work focuses on AI-powered data and search platforms, including Vespa.ai-based recommendation systems, LLM-assisted content enrichment, external embedding model integration, Delta Lake knowledge bases, cost-efficient analytics pipelines, and open-source observability modernization. I have led initiatives covering real-time recommendations such as "More Like This", "You May Like", "Because You Watched", trending content, and Shorts recommendations, while also evaluating lower-cost, extensible platforms such as OpenObserve for long-term telemetry retention and trend analysis.
+My recent work focuses on AI-powered data, search, and personalization platforms, including Vespa.ai-based recommendation systems, LLM-assisted content enrichment, external embedding model integration, Delta Lake knowledge bases, cost-efficient analytics pipelines, and open-source observability modernization. I have led initiatives covering real-time recommendations such as "More Like This", "You May Like", "Because You Watched", Taste Cluster, trending content, and Shorts recommendations, while also evaluating lower-cost, extensible platforms such as OpenObserve for long-term telemetry retention and trend analysis.
 
-I bring deep expertise in enterprise integration and API architecture, including microservices, event-driven patterns, ESB/SOA, OSB, API gateways, B2B platforms, and secure reusable APIs. I have also led MLOps pipelines, anomaly detection models, predictive analytics, AIOps monitoring, and large-scale observability solutions using platforms such as BigQuery, Vertex AI, Azure Data Explorer, Delta Lake, Kafka, Elasticsearch, OpenObserve, Spark, and cloud-native storage.
+I have also architected an end-to-end personalization platform for a streaming video product, translating viewer watch behavior into personalized content rails served through production APIs. The platform combines Delta Lake data sync, PostgreSQL/pgvector serving, Kubernetes deployment, engagement-aware ML modeling, cache-first recommendation serving, and parental-control-aware governance.
+
+I bring deep expertise in enterprise integration and API architecture, including microservices, event-driven patterns, ESB/SOA, OSB, API gateways, B2B platforms, and secure reusable APIs. I have also led MLOps pipelines, anomaly detection models, predictive analytics, AIOps monitoring, and large-scale observability solutions using platforms such as BigQuery, Vertex AI, Azure Data Explorer, Delta Lake, Kafka, Elasticsearch, OpenObserve, PostgreSQL/pgvector, Spark, and cloud-native storage.
 
 As a technical leader, I partner with business, product, and engineering teams to shape architecture strategy, evaluate platforms, deliver PoCs, optimize infrastructure costs, modernize codebases, and mentor teams. I am especially interested in data-driven products, AI in enterprise systems, scalable cloud architectures, and practical automation that improves reliability and user experience.
 
@@ -48,13 +53,14 @@ As a technical leader, I partner with business, product, and engineering teams t
 
 September 2023 - Present | Bengaluru, Karnataka, India
 
-Lead the design and optimization of scalable data platforms, AI-driven search, recommendation systems, observability modernization, and cost-efficient analytics strategies for media and subscriber data products. Current focus areas include Vespa.ai, LLM-assisted ingestion, external embedding models, content enrichment, OpenObserve migration, and personalization features such as "More Like This", "You May Like", "Because You Watched", trending content, and Shorts recommendations.
+Lead the design and optimization of scalable data platforms, AI-driven search, recommendation systems, personalization APIs, observability modernization, and cost-efficient analytics strategies for media and subscriber data products. Current focus areas include Vespa.ai, LLM-assisted ingestion, external embedding models, content enrichment, OpenObserve migration, PostgreSQL/pgvector serving, and personalization features such as "More Like This", "You May Like", "Because You Watched", Taste Cluster, trending content, and Shorts recommendations.
 
 Profile-ready contribution bullets:
 
 - Led implementation of a Delta Lake-based enterprise data platform, centralizing client data, logs, subscriber insights, and operational datasets for efficient storage, processing, and downstream analytics.
 - Built AI-powered conversational data solutions using open-source LLMs, Ollama, Duckling, and Delta Lake as a knowledge base to improve access to operational and business insights.
 - Designed and evolved search and recommendation capabilities, including "You May Like", "More Like This", "Because You Watched", trending content, Vespa.ai-based recommendations, embeddings, and LLM-driven enrichment.
+- Led design and delivery of an end-to-end personalization platform for streaming subscribers, turning watch behavior into production content rails through batch intelligence, PostgreSQL/pgvector serving, cache-first APIs, and Kubernetes-based operations.
 - Integrated external embedding models and LLM enrichment into ingestion flows to improve content understanding, metadata quality, similarity matching, and personalization.
 - Architected analytics cost optimization strategies using lifecycle policies, tiered storage, cloud transaction efficiency, and dynamic resource allocation.
 - Driving migration from Elasticsearch to OpenObserve to reduce observability platform cost, adopt an open-source Rust-based stack, enable easier AI-assisted feature customization, and retain telemetry data for longer-term trend analysis without requiring enterprise licensing.
@@ -63,6 +69,48 @@ Profile-ready contribution bullets:
 - Directed codebase modernization efforts to remove unused and outdated code, reduce technical debt, and improve maintainability and performance.
 - Partnered with product, business, and engineering stakeholders to align data strategy with company goals and contribute to RFP responses.
 
+## Featured project - Recommendation Engine | MediaFirst Streaming Platform
+
+Role: Technical Lead / Architect
+
+Executive positioning:
+
+Led design and delivery of an end-to-end personalization platform for a streaming video product, turning viewer watch behavior into personalized content rails such as "Because You Watched", Taste Cluster, and "You May Like". Architected a scalable batch-plus-serving model using Delta Lake, PostgreSQL/pgvector, Kubernetes, and cache-first APIs to balance recommendation freshness, parental controls, cost efficiency, and operational resilience.
+
+Resume-ready bullets:
+
+- Owned the personalization platform from data ingestion through ML inference to client-facing APIs, enabling personalized hubs and feed rails for streaming subscribers.
+- Defined a cache-first serving architecture with fresh, stale, and on-demand fallback paths, ensuring high availability without blocking batch processing on cache failures.
+- Delivered a multi-stage ML pipeline covering Delta Lake watch-history sync, user taste clustering, recommendation generation with diversity, and cold-start popularity fallback.
+- Introduced engagement-aware personalization through adaptive history windows for high, medium, and at-risk viewers, reducing unnecessary compute while improving relevance for sparse users.
+- Productized taste clustering as a pluggable algorithm framework supporting K-Means, HDBSCAN, graph-based methods, versioned policies, and A/B-ready experimentation modes.
+- Embedded compliance and trust controls through configurable parental rating filters and entitlement-aware content caps aligned with catalog maturity codes.
+- Operationalized the platform on Azure and Kubernetes using Helm, scheduled CronJobs, a single containerized Python stack, idempotent schema bootstrap, structured logging, and spot-node batch execution for cost efficiency.
+- Established clear configuration ownership across product, data science, and DevOps for database policies, Helm tuning, API serving knobs, and future admin API expansion.
+
+Leadership-oriented bullets:
+
+- Translated "personalized home screen" product goals into a durable three-layer architecture: batch intelligence, SQL/vector serving layer, and low-latency API.
+- Chose cache-first serving over real-time inference to meet latency and cost targets while preserving on-demand fallback for cache misses and catalog changes.
+- Built maturity-rating governance into the recommendation path so personalization could ship without compromising parental controls or catalog policy.
+- Designed watermark-based incremental processing and best-effort cache warming so partial failures did not block the core clustering pipeline.
+- Partnered with catalog, analytics, and client teams on shared Postgres serving schemas, hub/feed metadata contracts, and Helm-based deployment.
+
+Headline option:
+
+Architected and delivered an ML-powered personalization platform for a streaming TV product, serving personalized content rails at scale via Kubernetes and PostgreSQL vector search.
+
+Skills and keywords:
+
+Personalization, Recommendation Systems, ML Platform Architecture, Vector Search, pgvector, Batch Serving, Cache-First APIs, FastAPI, PostgreSQL, Delta Lake, Kubernetes, Helm, Azure, Content Compliance, Parental Controls, Streaming Media, MLOps, Technical Leadership.
+
+Impact placeholders to fill later:
+
+- Served X personalized feed requests per day with Y ms p95 latency.
+- Processed N subscriber profiles per 15-minute batch window.
+- Increased rail engagement or click-through by Z%.
+- Reduced batch compute cost by X% through incremental clustering and spot-node execution.
+
 ## Today's work capture
 
 Add notes here as you complete work today. After each entry, convert it into one of the profile-ready formats below.
@@ -70,6 +118,7 @@ Add notes here as you complete work today. After each entry, convert it into one
 | Date | Work completed | Technologies used | Business or technical impact | Profile-ready bullet |
 | --- | --- | --- | --- | --- |
 | 2026-08-23 | Working on migration from Elasticsearch to OpenObserve for observability and analytics data. | Elasticsearch, OpenObserve, Rust-based observability stack, open-source platform evaluation | Lowers platform cost, avoids enterprise license dependency for longer retention, enables easier AI-assisted feature changes, and keeps more historical data available for trend analysis. | Driving migration from Elasticsearch to OpenObserve to reduce observability cost, extend telemetry retention, support long-term trend analysis, and adopt an open-source Rust-based platform that can be customized more easily with AI-assisted development. |
+| 2026-08-23 | Added senior-leadership summary for MediaFirst recommendation engine and personalization platform. | Delta Lake, PostgreSQL, pgvector, Kubernetes, Helm, FastAPI, ML clustering, cache-first APIs | Frames personalization as a platform capability that converts watch behavior into production content rails while balancing freshness, compliance, latency, and operating cost. | Led design and delivery of an end-to-end personalization platform for a streaming product, turning viewer watch behavior into production content rails through batch intelligence, vector serving, cache-first APIs, and Kubernetes operations. |
 
 ### Prompts to capture today's work
 
