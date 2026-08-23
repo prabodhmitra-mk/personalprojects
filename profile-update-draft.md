@@ -24,22 +24,23 @@ Architect | Integration, Big Data, AI Search and Cloud Platforms
 2. Personalization Platform Architecture
 3. Big Data Architecture
 4. Enterprise Integration and API Architecture
-5. Vespa.ai
-6. Delta Lake
-7. Kubernetes
-8. PostgreSQL and pgvector
-9. Redis
-10. Kafka
-11. Elasticsearch
-12. OpenObserve and Observability Platforms
-13. MLOps
-14. Cloud Data Platforms
+5. Custom Recommendation Engine Architecture
+6. Vector Search
+7. Delta Lake
+8. Kubernetes
+9. PostgreSQL and pgvector
+10. Redis
+11. Kafka
+12. Elasticsearch
+13. OpenObserve and Observability Platforms
+14. MLOps
+15. Cloud Data Platforms
 
 ## Updated summary
 
 Results-driven technology leader and architect with extensive experience across enterprise integration, data architecture, AI/ML, and cloud-native platforms. I specialize in designing scalable, high-performance systems that support digital transformation, operational efficiency, and measurable business outcomes across telecom, finance, media, aviation, and retail domains.
 
-My recent work focuses on AI-powered data, search, and personalization platforms, including Vespa.ai-based recommendation systems, LLM-assisted content enrichment, external embedding model integration, Delta Lake knowledge bases, cost-efficient analytics pipelines, and open-source observability modernization. I have led initiatives covering real-time recommendations such as "More Like This", "You May Like", "Because You Watched", Taste Cluster, trending content, and Shorts recommendations, while also evaluating lower-cost, extensible platforms such as OpenObserve for long-term telemetry retention and trend analysis.
+My recent work focuses on AI-powered data, search, and personalization platforms, including custom recommendation-engine architecture, LLM-assisted content enrichment, external embedding model integration, Delta Lake knowledge bases, cost-efficient analytics pipelines, and open-source observability modernization. After an initial Vespa.ai POC, I shifted focus to building an in-house recommendation engine that can be customized more easily for product and business needs. I have led initiatives covering real-time recommendations such as "More Like This", "You May Like", "Because You Watched", Taste Cluster, trending content, and Shorts recommendations, while also evaluating lower-cost, extensible platforms such as OpenObserve for long-term telemetry retention and trend analysis.
 
 I have also architected an end-to-end personalization platform for a streaming video product, translating viewer watch behavior into personalized content rails served through production APIs. The platform combines Delta Lake data sync, PostgreSQL/pgvector serving, Kubernetes deployment, engagement-aware ML modeling, cache-first recommendation serving, and parental-control-aware governance.
 
@@ -53,13 +54,13 @@ As a technical leader, I partner with business, product, and engineering teams t
 
 September 2023 - Present | Bengaluru, Karnataka, India
 
-Lead the design and optimization of scalable data platforms, AI-driven search, recommendation systems, personalization APIs, observability modernization, and cost-efficient analytics strategies for media and subscriber data products. Current focus areas include Vespa.ai, LLM-assisted ingestion, external embedding models, content enrichment, OpenObserve migration, PostgreSQL/pgvector serving, and personalization features such as "More Like This", "You May Like", "Because You Watched", Taste Cluster, trending content, and Shorts recommendations.
+Lead the design and optimization of scalable data platforms, AI-driven search, recommendation systems, personalization APIs, observability modernization, and cost-efficient analytics strategies for media and subscriber data products. Current focus areas include custom recommendation-engine design after an initial Vespa.ai POC, LLM-assisted ingestion, external embedding models, content enrichment, OpenObserve migration, PostgreSQL/pgvector serving, and personalization features such as "More Like This", "You May Like", "Because You Watched", Taste Cluster, trending content, and Shorts recommendations.
 
 Profile-ready contribution bullets:
 
 - Led implementation of a Delta Lake-based enterprise data platform, centralizing client data, logs, subscriber insights, and operational datasets for efficient storage, processing, and downstream analytics.
 - Built AI-powered conversational data solutions using open-source LLMs, Ollama, Duckling, and Delta Lake as a knowledge base to improve access to operational and business insights.
-- Designed and evolved search and recommendation capabilities, including "You May Like", "More Like This", "Because You Watched", trending content, Vespa.ai-based recommendations, embeddings, and LLM-driven enrichment.
+- Designed and evolved search and recommendation capabilities, including an initial Vespa.ai POC followed by a customizable in-house recommendation engine for "You May Like", "More Like This", "Because You Watched", trending content, embeddings, and LLM-driven enrichment.
 - Led design and delivery of an end-to-end personalization platform for streaming subscribers, turning watch behavior into production content rails through batch intelligence, PostgreSQL/pgvector serving, cache-first APIs, and Kubernetes-based operations.
 - Integrated external embedding models and LLM enrichment into ingestion flows to improve content understanding, metadata quality, similarity matching, and personalization.
 - Architected analytics cost optimization strategies using lifecycle policies, tiered storage, cloud transaction efficiency, and dynamic resource allocation.
@@ -75,7 +76,7 @@ Role: Technical Lead / Architect
 
 Executive positioning:
 
-Led design and delivery of an end-to-end personalization platform for a streaming video product, turning viewer watch behavior into personalized content rails such as "Because You Watched", Taste Cluster, and "You May Like". Architected a scalable batch-plus-serving model using Delta Lake, PostgreSQL/pgvector, Kubernetes, and cache-first APIs to balance recommendation freshness, parental controls, cost efficiency, and operational resilience.
+Led design and delivery of an end-to-end personalization platform for a streaming video product, turning viewer watch behavior into personalized content rails such as "Because You Watched", Taste Cluster, and "You May Like". After an initial Vespa.ai POC, helped shape the move toward an in-house recommendation engine that could be customized more easily. Architected a scalable batch-plus-serving model using Delta Lake, PostgreSQL/pgvector, Kubernetes, and cache-first APIs to balance recommendation freshness, parental controls, cost efficiency, and operational resilience.
 
 Resume-ready bullets:
 
@@ -119,6 +120,7 @@ Add notes here as you complete work today. After each entry, convert it into one
 | --- | --- | --- | --- | --- |
 | 2026-08-23 | Working on migration from Elasticsearch to OpenObserve for observability and analytics data. | Elasticsearch, OpenObserve, Rust-based observability stack, open-source platform evaluation | Lowers platform cost, avoids enterprise license dependency for longer retention, enables easier AI-assisted feature changes, and keeps more historical data available for trend analysis. | Driving migration from Elasticsearch to OpenObserve to reduce observability cost, extend telemetry retention, support long-term trend analysis, and adopt an open-source Rust-based platform that can be customized more easily with AI-assisted development. |
 | 2026-08-23 | Added senior-leadership summary for MediaFirst recommendation engine and personalization platform. | Delta Lake, PostgreSQL, pgvector, Kubernetes, Helm, FastAPI, ML clustering, cache-first APIs | Frames personalization as a platform capability that converts watch behavior into production content rails while balancing freshness, compliance, latency, and operating cost. | Led design and delivery of an end-to-end personalization platform for a streaming product, turning viewer watch behavior into production content rails through batch intelligence, vector serving, cache-first APIs, and Kubernetes operations. |
+| 2026-08-23 | Repositioned Vespa.ai as an initial POC and clarified the move to an in-house recommendation engine. | Vespa.ai POC, custom recommendation engine, personalization architecture | Aligns the profile with management's direction to build a customizable recommendation platform instead of relying on an external recommendation product. | Evaluated Vespa.ai through an initial POC and helped shape the pivot toward a customizable in-house recommendation engine aligned with product-specific personalization needs. |
 
 ### Prompts to capture today's work
 
